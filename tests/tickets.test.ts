@@ -19,7 +19,7 @@ async function createTestDb() {
   const sqlite = new Database(":memory:");
   const db = drizzle(sqlite, { schema });
   const migration = Bun.file(
-    import.meta.dir + "/../drizzle/0000_free_satana.sql"
+    import.meta.dir + "/../migrations/0000_free_satana.sql"
   );
   const sql = await migration.text();
   const statements = sql
