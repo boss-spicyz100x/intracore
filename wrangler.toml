@@ -1,0 +1,9 @@
+name = "intracore"
+main = "index.ts"
+compatibility_date = "2025-06-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "intracore"
+database_id = "00000000-0000-0000-0000-000000000001"
+migrations_dir = "drizzle"
