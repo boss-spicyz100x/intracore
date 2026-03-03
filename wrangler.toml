@@ -1,6 +1,6 @@
 name = "intracore"
 main = "index.ts"
-compatibility_date = "2025-06-01"
+compatibility_date = "2026-03-03"
 
 [[d1_databases]]
 binding = "DB"
