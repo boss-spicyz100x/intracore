@@ -7,14 +7,7 @@ job "intracore" {
   }
 
   group "app" {
-    count = 4
-
-    update {
-      max_parallel     = 4
-      min_healthy_time = "10s"
-      healthy_deadline = "2m"
-      auto_revert      = true
-    }
+    count = 1
 
     network {
       port "http" { static = 25050 }
@@ -56,8 +49,8 @@ EOH
       }
 
       resources {
-        cpu    = 1000
-        memory = 1024
+        cpu    = 2000
+        memory = 4096
       }
 
       restart {
