@@ -134,6 +134,46 @@ test("POST /v1/tickets non-existent reportedById returns 404", async () => {
   });
 });
 
+test("POST /v1/tickets empty string assigneeId returns 422", async () => {
+  const db = await createTestDb();
+  const { companyId, reporterId } = await seedCompanyAndEmployees(db);
+  const app = createTestApp(db);
+  const res = await app.handle(
+    new Request("http://localhost/v1/tickets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: "No Assignee",
+        companyId,
+        reportedById: reporterId,
+        assigneeId: "",
+      }),
+    }),
+  );
+  expect(res.status).toBe(422);
+});
+
+test("POST /v1/tickets null assigneeId treated as no assignee returns 200", async () => {
+  const db = await createTestDb();
+  const { companyId, reporterId } = await seedCompanyAndEmployees(db);
+  const app = createTestApp(db);
+  const res = await app.handle(
+    new Request("http://localhost/v1/tickets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: "No Assignee",
+        companyId,
+        reportedById: reporterId,
+        assigneeId: null,
+      }),
+    }),
+  );
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as Record<string, unknown>;
+  expect(body.assignee).toBeNull();
+});
+
 test("POST /v1/tickets non-existent assigneeId returns 404", async () => {
   const db = await createTestDb();
   const { companyId, reporterId } = await seedCompanyAndEmployees(db);

@@ -18,17 +18,11 @@ const createTicketBody = t.Object({
   companyId: t.String({ format: "uuid" }),
   reportedById: t.String({ format: "uuid" }),
   description: t.Optional(t.String()),
-  priority: t.Optional(
-    t.Union([t.Literal("LOW"), t.Literal("MEDIUM"), t.Literal("HIGH")])
-  ),
+  priority: t.Optional(t.Union([t.Literal("LOW"), t.Literal("MEDIUM"), t.Literal("HIGH")])),
   category: t.Optional(
-    t.Union([
-      t.Literal("IT"),
-      t.Literal("FACILITIES"),
-      t.Literal("MISCELLANEOUS"),
-    ])
+    t.Union([t.Literal("IT"), t.Literal("FACILITIES"), t.Literal("MISCELLANEOUS")]),
   ),
-  assigneeId: t.Optional(t.String({ format: "uuid" })),
+  assigneeId: t.Optional(t.Union([t.String({ format: "uuid" }), t.Null()])),
 });
 
 const updateTicketBody = t.Object({
@@ -41,17 +35,11 @@ const updateTicketBody = t.Object({
       t.Literal("RESOLVED"),
       t.Literal("CANCELLED"),
       t.Literal("CLOSED"),
-    ])
+    ]),
   ),
-  priority: t.Optional(
-    t.Union([t.Literal("LOW"), t.Literal("MEDIUM"), t.Literal("HIGH")])
-  ),
+  priority: t.Optional(t.Union([t.Literal("LOW"), t.Literal("MEDIUM"), t.Literal("HIGH")])),
   category: t.Optional(
-    t.Union([
-      t.Literal("IT"),
-      t.Literal("FACILITIES"),
-      t.Literal("MISCELLANEOUS"),
-    ])
+    t.Union([t.Literal("IT"), t.Literal("FACILITIES"), t.Literal("MISCELLANEOUS")]),
   ),
   assigneeId: t.Optional(t.Union([t.String({ format: "uuid" }), t.Null()])),
 });
@@ -64,13 +52,13 @@ export function ticketsRouter(db: AnyDB) {
         const tickets = await listTickets(db);
         return tickets;
       },
-    {
-      detail: {
-        summary: "List open tickets",
-        tags: ["tickets"],
+      {
+        detail: {
+          summary: "List open tickets",
+          tags: ["tickets"],
+        },
       },
-    }
-  )
+    )
     .get(
       "/history",
       async ({ query }) => {
@@ -80,7 +68,7 @@ export function ticketsRouter(db: AnyDB) {
               error: "Bad Request",
               message: "employeeId is required",
             }),
-            { status: 400, headers: { "Content-Type": "application/json" } }
+            { status: 400, headers: { "Content-Type": "application/json" } },
           );
         }
         const tickets = await getTicketHistory(db, {
@@ -103,18 +91,12 @@ export function ticketsRouter(db: AnyDB) {
               t.Literal("RESOLVED"),
               t.Literal("CANCELLED"),
               t.Literal("CLOSED"),
-            ])
+            ]),
           ),
           category: t.Optional(
-            t.Union([
-              t.Literal("IT"),
-              t.Literal("FACILITIES"),
-              t.Literal("MISCELLANEOUS"),
-            ])
+            t.Union([t.Literal("IT"), t.Literal("FACILITIES"), t.Literal("MISCELLANEOUS")]),
           ),
-          priority: t.Optional(
-            t.Union([t.Literal("LOW"), t.Literal("MEDIUM"), t.Literal("HIGH")])
-          ),
+          priority: t.Optional(t.Union([t.Literal("LOW"), t.Literal("MEDIUM"), t.Literal("HIGH")])),
           dateFrom: t.Optional(t.String()),
           dateTo: t.Optional(t.String()),
         }),
@@ -122,7 +104,7 @@ export function ticketsRouter(db: AnyDB) {
           summary: "Get ticket history for employee",
           tags: ["tickets"],
         },
-      }
+      },
     )
     .post(
       "/",
@@ -131,7 +113,7 @@ export function ticketsRouter(db: AnyDB) {
         if (!company) {
           return new Response(
             JSON.stringify({ error: "Not Found", message: "Company not found" }),
-            { status: 404, headers: { "Content-Type": "application/json" } }
+            { status: 404, headers: { "Content-Type": "application/json" } },
           );
         }
         const reporter = await getEmployeeById(db, body.reportedById);
@@ -141,18 +123,19 @@ export function ticketsRouter(db: AnyDB) {
               error: "Not Found",
               message: "Reporter employee not found",
             }),
-            { status: 404, headers: { "Content-Type": "application/json" } }
+            { status: 404, headers: { "Content-Type": "application/json" } },
           );
         }
-        if (body.assigneeId) {
-          const assignee = await getEmployeeById(db, body.assigneeId);
+        const assigneeId = body.assigneeId || undefined;
+        if (assigneeId) {
+          const assignee = await getEmployeeById(db, assigneeId);
           if (!assignee) {
             return new Response(
               JSON.stringify({
                 error: "Not Found",
                 message: "Assignee employee not found",
               }),
-              { status: 404, headers: { "Content-Type": "application/json" } }
+              { status: 404, headers: { "Content-Type": "application/json" } },
             );
           }
         }
@@ -167,21 +150,21 @@ export function ticketsRouter(db: AnyDB) {
           description: body.description,
           companyId: body.companyId,
           reportedById: body.reportedById,
-          assigneeId: body.assigneeId,
+          assigneeId,
           priority: body.priority,
           category: body.category,
         });
         const full = await getTicketById(db, ticket.id);
         return full;
       },
-    {
-      body: createTicketBody,
-      detail: {
-        summary: "Create ticket",
-        tags: ["tickets"],
+      {
+        body: createTicketBody,
+        detail: {
+          summary: "Create ticket",
+          tags: ["tickets"],
+        },
       },
-    }
-  )
+    )
     .get(
       "/:id",
       async ({ params }) => {
@@ -192,19 +175,19 @@ export function ticketsRouter(db: AnyDB) {
               error: "Not Found",
               message: "Ticket not found",
             }),
-            { status: 404, headers: { "Content-Type": "application/json" } }
+            { status: 404, headers: { "Content-Type": "application/json" } },
           );
         }
         return ticket;
       },
-    {
-      params: t.Object({ id: t.String({ format: "uuid" }) }),
-      detail: {
-        summary: "Get ticket by ID",
-        tags: ["tickets"],
+      {
+        params: t.Object({ id: t.String({ format: "uuid" }) }),
+        detail: {
+          summary: "Get ticket by ID",
+          tags: ["tickets"],
+        },
       },
-    }
-  )
+    )
     .put(
       "/:id",
       async ({ params, body }) => {
@@ -215,7 +198,7 @@ export function ticketsRouter(db: AnyDB) {
               error: "Not Found",
               message: "Ticket not found",
             }),
-            { status: 404, headers: { "Content-Type": "application/json" } }
+            { status: 404, headers: { "Content-Type": "application/json" } },
           );
         }
         if (body.assigneeId !== undefined && body.assigneeId !== null) {
@@ -226,7 +209,7 @@ export function ticketsRouter(db: AnyDB) {
                 error: "Not Found",
                 message: "Assignee employee not found",
               }),
-              { status: 404, headers: { "Content-Type": "application/json" } }
+              { status: 404, headers: { "Content-Type": "application/json" } },
             );
           }
         }
@@ -241,27 +224,27 @@ export function ticketsRouter(db: AnyDB) {
         if (!updated) return existing;
         return getTicketById(db, params.id);
       },
-    {
-      params: t.Object({ id: t.String({ format: "uuid" }) }),
-      body: updateTicketBody,
-      detail: {
-        summary: "Update ticket",
-        tags: ["tickets"],
+      {
+        params: t.Object({ id: t.String({ format: "uuid" }) }),
+        body: updateTicketBody,
+        detail: {
+          summary: "Update ticket",
+          tags: ["tickets"],
+        },
       },
-    }
-  )
+    )
     .delete(
       "/:id",
       async ({ params }) => {
         await closeTicket(db, params.id);
         return new Response(null, { status: 204 });
       },
-    {
-      params: t.Object({ id: t.String({ format: "uuid" }) }),
-      detail: {
-        summary: "Close ticket (idempotent)",
-        tags: ["tickets"],
+      {
+        params: t.Object({ id: t.String({ format: "uuid" }) }),
+        detail: {
+          summary: "Close ticket (idempotent)",
+          tags: ["tickets"],
+        },
       },
-    }
-  );
+    );
 }
