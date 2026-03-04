@@ -1,4 +1,4 @@
-import { Elysia, t } from "elysia";
+import { Elysia, t, status as error } from "elysia";
 import { v7 as uuidv7 } from "uuid";
 import type { AnyDB } from "../../db/tickets";
 import {
@@ -63,13 +63,10 @@ export function ticketsRouter(db: AnyDB) {
       "/history",
       async ({ query }) => {
         if (!query.employeeId) {
-          return new Response(
-            JSON.stringify({
-              error: "Bad Request",
-              message: "employeeId is required",
-            }),
-            { status: 400, headers: { "Content-Type": "application/json" } },
-          );
+          throw error(400, {
+            error: "Bad Request",
+            message: "employeeId is required",
+          });
         }
         const tickets = await getTicketHistory(db, {
           employeeId: query.employeeId,
@@ -111,32 +108,23 @@ export function ticketsRouter(db: AnyDB) {
       async ({ body }) => {
         const company = await getCompanyById(db, body.companyId);
         if (!company) {
-          return new Response(
-            JSON.stringify({ error: "Not Found", message: "Company not found" }),
-            { status: 404, headers: { "Content-Type": "application/json" } },
-          );
+          throw error(404, { error: "Not Found", message: "Company not found" });
         }
         const reporter = await getEmployeeById(db, body.reportedById);
         if (!reporter) {
-          return new Response(
-            JSON.stringify({
-              error: "Not Found",
-              message: "Reporter employee not found",
-            }),
-            { status: 404, headers: { "Content-Type": "application/json" } },
-          );
+          throw error(404, {
+            error: "Not Found",
+            message: "Reporter employee not found",
+          });
         }
         const assigneeId = body.assigneeId || undefined;
         if (assigneeId) {
           const assignee = await getEmployeeById(db, assigneeId);
           if (!assignee) {
-            return new Response(
-              JSON.stringify({
-                error: "Not Found",
-                message: "Assignee employee not found",
-              }),
-              { status: 404, headers: { "Content-Type": "application/json" } },
-            );
+            throw error(404, {
+              error: "Not Found",
+              message: "Assignee employee not found",
+            });
           }
         }
         const count = await countTicketsByCompany(db, body.companyId);
@@ -170,13 +158,10 @@ export function ticketsRouter(db: AnyDB) {
       async ({ params }) => {
         const ticket = await getTicketById(db, params.id);
         if (!ticket) {
-          return new Response(
-            JSON.stringify({
-              error: "Not Found",
-              message: "Ticket not found",
-            }),
-            { status: 404, headers: { "Content-Type": "application/json" } },
-          );
+          throw error(404, {
+            error: "Not Found",
+            message: "Ticket not found",
+          });
         }
         return ticket;
       },
@@ -193,24 +178,18 @@ export function ticketsRouter(db: AnyDB) {
       async ({ params, body }) => {
         const existing = await getTicketById(db, params.id);
         if (!existing) {
-          return new Response(
-            JSON.stringify({
-              error: "Not Found",
-              message: "Ticket not found",
-            }),
-            { status: 404, headers: { "Content-Type": "application/json" } },
-          );
+          throw error(404, {
+            error: "Not Found",
+            message: "Ticket not found",
+          });
         }
         if (body.assigneeId !== undefined && body.assigneeId !== null) {
           const assignee = await getEmployeeById(db, body.assigneeId);
           if (!assignee) {
-            return new Response(
-              JSON.stringify({
-                error: "Not Found",
-                message: "Assignee employee not found",
-              }),
-              { status: 404, headers: { "Content-Type": "application/json" } },
-            );
+            throw error(404, {
+              error: "Not Found",
+              message: "Assignee employee not found",
+            });
           }
         }
         const updated = await updateTicket(db, params.id, {

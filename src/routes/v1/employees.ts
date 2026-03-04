@@ -1,4 +1,4 @@
-import { Elysia, t } from "elysia";
+import { Elysia, t, status as error } from "elysia";
 import { v7 as uuidv7 } from "uuid";
 import type { AnyDB } from "../../db/tickets";
 import {
@@ -31,8 +31,6 @@ const updateEmployeeBody = t.Object({
   preferredLanguage: t.Optional(t.String()),
 });
 
-const json = () => ({ "Content-Type": "application/json" }) as const;
-
 export function employeesRouter(db: AnyDB) {
   return new Elysia({ prefix: "/v1/employees" })
     .get(
@@ -53,23 +51,17 @@ export function employeesRouter(db: AnyDB) {
       async ({ body }) => {
         const company = await getCompanyById(db, body.companyId);
         if (!company) {
-          return new Response(
-            JSON.stringify({
-              error: "Not Found",
-              message: "Company not found",
-            }),
-            { status: 404, headers: json() },
-          );
+          throw error(404, {
+            error: "Not Found",
+            message: "Company not found",
+          });
         }
         const existingEmail = await getEmployeeByEmail(db, body.email);
         if (existingEmail) {
-          return new Response(
-            JSON.stringify({
-              error: "Conflict",
-              message: "Employee email already exists",
-            }),
-            { status: 409, headers: json() },
-          );
+          throw error(409, {
+            error: "Conflict",
+            message: "Employee email already exists",
+          });
         }
         const employee = await createEmployee(db, {
           id: uuidv7(),
@@ -94,13 +86,10 @@ export function employeesRouter(db: AnyDB) {
       async ({ params }) => {
         const employee = await getEmployeeById(db, params.id);
         if (!employee) {
-          return new Response(
-            JSON.stringify({
-              error: "Not Found",
-              message: "Employee not found",
-            }),
-            { status: 404, headers: json() },
-          );
+          throw error(404, {
+            error: "Not Found",
+            message: "Employee not found",
+          });
         }
         return employee;
       },
@@ -114,24 +103,18 @@ export function employeesRouter(db: AnyDB) {
       async ({ params, body }) => {
         const existing = await getEmployeeById(db, params.id);
         if (!existing) {
-          return new Response(
-            JSON.stringify({
-              error: "Not Found",
-              message: "Employee not found",
-            }),
-            { status: 404, headers: json() },
-          );
+          throw error(404, {
+            error: "Not Found",
+            message: "Employee not found",
+          });
         }
         if (body.email !== undefined) {
           const emailTaken = await getEmployeeByEmail(db, body.email, params.id);
           if (emailTaken) {
-            return new Response(
-              JSON.stringify({
-                error: "Conflict",
-                message: "Employee email already exists",
-              }),
-              { status: 409, headers: json() },
-            );
+            throw error(409, {
+              error: "Conflict",
+              message: "Employee email already exists",
+            });
           }
         }
         const updated = await updateEmployee(db, params.id, {

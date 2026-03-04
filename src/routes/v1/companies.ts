@@ -1,4 +1,4 @@
-import { Elysia, t } from "elysia";
+import { Elysia, t, status as error } from "elysia";
 import { v7 as uuidv7 } from "uuid";
 import type { AnyDB } from "../../db/tickets";
 import {
@@ -28,8 +28,6 @@ const updateCompanyBody = t.Object({
   description: t.Optional(t.String()),
 });
 
-const json = () => ({ "Content-Type": "application/json" } as const);
-
 export function companiesRouter(db: AnyDB) {
   return new Elysia({ prefix: "/v1/companies" })
     .get(
@@ -40,30 +38,24 @@ export function companiesRouter(db: AnyDB) {
       },
       {
         detail: { summary: "List companies", tags: ["companies"] },
-      }
+      },
     )
     .post(
       "/",
       async ({ body }) => {
         const slug = normalizeSlug(body.slug);
         if (!SLUG_PATTERN.test(slug)) {
-          return new Response(
-            JSON.stringify({
-              error: "Bad Request",
-              message: "Slug must be uppercase letters and numbers only (e.g. ING)",
-            }),
-            { status: 400, headers: json() }
-          );
+          throw error(400, {
+            error: "Bad Request",
+            message: "Slug must be uppercase letters and numbers only (e.g. ING)",
+          });
         }
         const existing = await getCompanyBySlug(db, slug);
         if (existing) {
-          return new Response(
-            JSON.stringify({
-              error: "Conflict",
-              message: "Company slug already exists",
-            }),
-            { status: 409, headers: json() }
-          );
+          throw error(409, {
+            error: "Conflict",
+            message: "Company slug already exists",
+          });
         }
         const company = await createCompany(db, {
           id: uuidv7(),
@@ -76,61 +68,49 @@ export function companiesRouter(db: AnyDB) {
       {
         body: createCompanyBody,
         detail: { summary: "Create company", tags: ["companies"] },
-      }
+      },
     )
     .get(
       "/:id",
       async ({ params }) => {
         const company = await getCompanyById(db, params.id);
         if (!company) {
-          return new Response(
-            JSON.stringify({
-              error: "Not Found",
-              message: "Company not found",
-            }),
-            { status: 404, headers: json() }
-          );
+          throw error(404, {
+            error: "Not Found",
+            message: "Company not found",
+          });
         }
         return company;
       },
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
         detail: { summary: "Get company by ID", tags: ["companies"] },
-      }
+      },
     )
     .put(
       "/:id",
       async ({ params, body }) => {
         const existing = await getCompanyById(db, params.id);
         if (!existing) {
-          return new Response(
-            JSON.stringify({
-              error: "Not Found",
-              message: "Company not found",
-            }),
-            { status: 404, headers: json() }
-          );
+          throw error(404, {
+            error: "Not Found",
+            message: "Company not found",
+          });
         }
         if (body.slug !== undefined) {
           const slug = normalizeSlug(body.slug);
           if (!SLUG_PATTERN.test(slug)) {
-            return new Response(
-              JSON.stringify({
-                error: "Bad Request",
-                message: "Slug must be uppercase letters and numbers only (e.g. ING)",
-              }),
-              { status: 400, headers: json() }
-            );
+            throw error(400, {
+              error: "Bad Request",
+              message: "Slug must be uppercase letters and numbers only (e.g. ING)",
+            });
           }
           const slugTaken = await getCompanyBySlug(db, slug, params.id);
           if (slugTaken) {
-            return new Response(
-              JSON.stringify({
-                error: "Conflict",
-                message: "Company slug already exists",
-              }),
-              { status: 409, headers: json() }
-            );
+            throw error(409, {
+              error: "Conflict",
+              message: "Company slug already exists",
+            });
           }
         }
         const updated = await updateCompany(db, params.id, {
@@ -144,7 +124,7 @@ export function companiesRouter(db: AnyDB) {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
         body: updateCompanyBody,
         detail: { summary: "Update company", tags: ["companies"] },
-      }
+      },
     )
     .delete(
       "/:id",
@@ -155,6 +135,6 @@ export function companiesRouter(db: AnyDB) {
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
         detail: { summary: "Soft-delete company (idempotent)", tags: ["companies"] },
-      }
+      },
     );
 }

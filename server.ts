@@ -6,6 +6,8 @@ import { ticketsRouter } from "./src/routes/v1/tickets";
 import { companiesRouter } from "./src/routes/v1/companies";
 import { employeesRouter } from "./src/routes/v1/employees";
 import { identityRouter } from "./src/routes/v1/identity";
+import { requestLoggerPlugin } from "./src/middleware/request-logger";
+import { logger } from "./src/logger";
 
 const db = drizzle({ connection: process.env.DATABASE_URL!, schema } as any);
 
@@ -14,7 +16,10 @@ const healthResponse = () => ({
   timestamp: new Date().toISOString(),
 });
 
+const port = process.env.PORT ?? 3000;
+
 new Elysia()
+  .use(requestLoggerPlugin)
   .use(
     swagger({
       path: "/docs",
@@ -33,4 +38,6 @@ new Elysia()
   .use(companiesRouter(db as any))
   .use(employeesRouter(db as any))
   .use(identityRouter(db as any))
-  .listen(process.env.PORT ?? 3000);
+  .listen(port, () => {
+    logger.info({ port: Number(port) }, "Server listening");
+  });

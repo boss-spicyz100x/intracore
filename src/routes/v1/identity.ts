@@ -1,4 +1,4 @@
-import { Elysia, t } from "elysia";
+import { Elysia, t, status as error } from "elysia";
 import type { AnyDB } from "../../db/tickets";
 import { employees } from "../../db/schema.postgres";
 import { eq, and, isNull } from "drizzle-orm";
@@ -8,8 +8,6 @@ const verifyBody = t.Object({
   email: t.String({ format: "email" }),
   employeeNumber: t.String({ minLength: 1 }),
 });
-
-const json = () => ({ "Content-Type": "application/json" }) as const;
 
 export function identityRouter(db: AnyDB) {
   return new Elysia({ prefix: "/v1/identity" }).post(
@@ -34,13 +32,10 @@ export function identityRouter(db: AnyDB) {
         .limit(1);
 
       if (!r) {
-        return new Response(
-          JSON.stringify({
-            error: "Unauthorized",
-            message: "Identity verification failed",
-          }),
-          { status: 401, headers: json() },
-        );
+        throw error(401, {
+          error: "Unauthorized",
+          message: "Identity verification failed",
+        });
       }
 
       return {
