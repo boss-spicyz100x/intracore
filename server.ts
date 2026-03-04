@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/bun-sql";
 import { swagger } from "@elysiajs/swagger";
 import { Elysia } from "elysia";
 import * as schema from "./src/db/schema.sqlite";
-import { ticketsRouter } from "./src/routes/v1/tickets";
+import { ticketsRouter } from "./src/routes/v1/tickets.pg";
 import { companiesRouter } from "./src/routes/v1/companies";
 import { employeesRouter } from "./src/routes/v1/employees";
 import { identityRouter } from "./src/routes/v1/identity";
