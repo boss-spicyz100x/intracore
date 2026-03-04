@@ -1,0 +1,7 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/crates/oxc_linter/schemas/oxlint.schema.json",
+  "rules": {
+    "recommended": "warn"
+  },
+  "plugins": ["typescript"]
+}

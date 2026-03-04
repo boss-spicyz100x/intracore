@@ -1,8 +1,6 @@
 import { eq, isNull, and, ne } from "drizzle-orm";
-import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import { companies } from "./schema";
-
-export type AnyDB = BaseSQLiteDatabase<"async", any, any>;
+import type { AnyDB } from "./tickets";
 
 export type Company = {
   id: string;
@@ -15,17 +13,11 @@ export type Company = {
 };
 
 export async function listCompanies(db: AnyDB): Promise<Company[]> {
-  const rows = await db
-    .select()
-    .from(companies)
-    .where(isNull(companies.deletedAt));
+  const rows = await db.select().from(companies).where(isNull(companies.deletedAt));
   return rows;
 }
 
-export async function getCompanyById(
-  db: AnyDB,
-  id: string
-): Promise<Company | null> {
+export async function getCompanyById(db: AnyDB, id: string): Promise<Company | null> {
   const [r] = await db
     .select()
     .from(companies)
@@ -37,16 +29,12 @@ export async function getCompanyById(
 export async function getCompanyBySlug(
   db: AnyDB,
   slug: string,
-  excludeId?: string
+  excludeId?: string,
 ): Promise<Company | null> {
   const conditions = excludeId
     ? and(eq(companies.slug, slug), ne(companies.id, excludeId), isNull(companies.deletedAt))
     : and(eq(companies.slug, slug), isNull(companies.deletedAt));
-  const [r] = await db
-    .select()
-    .from(companies)
-    .where(conditions)
-    .limit(1);
+  const [r] = await db.select().from(companies).where(conditions).limit(1);
   return r ?? null;
 }
 
@@ -57,10 +45,7 @@ export type CreateCompanyInput = {
   description?: string;
 };
 
-export async function createCompany(
-  db: AnyDB,
-  input: CreateCompanyInput
-): Promise<Company> {
+export async function createCompany(db: AnyDB, input: CreateCompanyInput): Promise<Company> {
   const now = new Date().toISOString();
   const [row] = await db
     .insert(companies)
@@ -86,7 +71,7 @@ export type UpdateCompanyInput = {
 export async function updateCompany(
   db: AnyDB,
   id: string,
-  input: UpdateCompanyInput
+  input: UpdateCompanyInput,
 ): Promise<Company | null> {
   const now = new Date().toISOString();
   const values: Record<string, unknown> = { updatedAt: now };
@@ -105,8 +90,5 @@ export async function updateCompany(
 
 export async function softDeleteCompany(db: AnyDB, id: string): Promise<void> {
   const now = new Date().toISOString();
-  await db
-    .update(companies)
-    .set({ deletedAt: now, updatedAt: now })
-    .where(eq(companies.id, id));
+  await db.update(companies).set({ deletedAt: now, updatedAt: now }).where(eq(companies.id, id));
 }

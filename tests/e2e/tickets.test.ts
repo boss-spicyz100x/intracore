@@ -41,7 +41,7 @@ test("GET /v1/tickets returns only open tickets", async () => {
         reportedById: reporterId,
         assigneeId,
       }),
-    })
+    }),
   );
   expect(createRes.status).toBe(200);
   const ticket = (await createRes.json()) as { id: string };
@@ -51,7 +51,7 @@ test("GET /v1/tickets returns only open tickets", async () => {
   expect(await listRes1.json()).toHaveLength(1);
 
   const deleteRes = await app.handle(
-    new Request(`http://localhost/v1/tickets/${ticket.id}`, { method: "DELETE" })
+    new Request(`http://localhost/v1/tickets/${ticket.id}`, { method: "DELETE" }),
   );
   expect(deleteRes.status).toBe(204);
 
@@ -68,7 +68,7 @@ test("POST /v1/tickets missing required fields returns 422", async () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: "No company" }),
-    })
+    }),
   );
   expect(res.status).toBe(422);
 });
@@ -86,7 +86,7 @@ test("POST /v1/tickets invalid UUID for companyId returns 422", async () => {
         companyId: "not-a-uuid",
         reportedById: reporterId,
       }),
-    })
+    }),
   );
   expect(res.status).toBe(422);
 });
@@ -104,7 +104,7 @@ test("POST /v1/tickets non-existent companyId returns 404", async () => {
         companyId: uuidv7(),
         reportedById: reporterId,
       }),
-    })
+    }),
   );
   expect(res.status).toBe(404);
   const body = await res.json();
@@ -124,7 +124,7 @@ test("POST /v1/tickets non-existent reportedById returns 404", async () => {
         companyId,
         reportedById: uuidv7(),
       }),
-    })
+    }),
   );
   expect(res.status).toBe(404);
   const body = await res.json();
@@ -148,7 +148,7 @@ test("POST /v1/tickets non-existent assigneeId returns 404", async () => {
         reportedById: reporterId,
         assigneeId: uuidv7(),
       }),
-    })
+    }),
   );
   expect(res.status).toBe(404);
   const body = await res.json();
@@ -171,7 +171,7 @@ test("POST /v1/tickets valid minimal payload returns 200 with ticket", async () 
         companyId,
         reportedById: reporterId,
       }),
-    })
+    }),
   );
   expect(res.status).toBe(200);
   const body = (await res.json()) as Record<string, unknown>;
@@ -196,7 +196,7 @@ test("POST /v1/tickets sequential creates increment ticket numbers", async () =>
         companyId,
         reportedById: reporterId,
       }),
-    })
+    }),
   );
   const ticket1 = (await res1.json()) as { ticketNumber: string };
   expect(ticket1.ticketNumber).toBe("ACME-00001");
@@ -210,7 +210,7 @@ test("POST /v1/tickets sequential creates increment ticket numbers", async () =>
         companyId,
         reportedById: reporterId,
       }),
-    })
+    }),
   );
   const ticket2 = (await res2.json()) as { ticketNumber: string };
   expect(ticket2.ticketNumber).toBe("ACME-00002");
@@ -231,13 +231,11 @@ test("GET /v1/tickets/:id valid ticket returns 200 with relations", async () => 
         reportedById: reporterId,
         assigneeId,
       }),
-    })
+    }),
   );
   const ticket = (await createRes.json()) as { id: string };
 
-  const res = await app.handle(
-    new Request(`http://localhost/v1/tickets/${ticket.id}`)
-  );
+  const res = await app.handle(new Request(`http://localhost/v1/tickets/${ticket.id}`));
   expect(res.status).toBe(200);
   const body = (await res.json()) as Record<string, unknown>;
   expect(body.id).toBe(ticket.id);
@@ -250,9 +248,7 @@ test("GET /v1/tickets/:id valid ticket returns 200 with relations", async () => 
 test("GET /v1/tickets/:id non-existent UUID returns 404", async () => {
   const db = await createTestDb();
   const app = createTestApp(db);
-  const res = await app.handle(
-    new Request(`http://localhost/v1/tickets/${uuidv7()}`)
-  );
+  const res = await app.handle(new Request(`http://localhost/v1/tickets/${uuidv7()}`));
   expect(res.status).toBe(404);
   const body = await res.json();
   expect(body).toMatchObject({ error: "Not Found", message: "Ticket not found" });
@@ -261,9 +257,7 @@ test("GET /v1/tickets/:id non-existent UUID returns 404", async () => {
 test("GET /v1/tickets/:id invalid UUID format returns 422", async () => {
   const db = await createTestDb();
   const app = createTestApp(db);
-  const res = await app.handle(
-    new Request("http://localhost/v1/tickets/not-a-uuid")
-  );
+  const res = await app.handle(new Request("http://localhost/v1/tickets/not-a-uuid"));
   expect(res.status).toBe(422);
 });
 
@@ -275,7 +269,7 @@ test("PUT /v1/tickets/:id non-existent ticket returns 404", async () => {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ description: "Updated" }),
-    })
+    }),
   );
   expect(res.status).toBe(404);
 });
@@ -296,7 +290,7 @@ test("PUT /v1/tickets/:id valid update returns 200 with updated values", async (
         companyId,
         reportedById: reporterId,
       }),
-    })
+    }),
   );
   const ticket = (await createRes.json()) as { id: string };
 
@@ -305,7 +299,7 @@ test("PUT /v1/tickets/:id valid update returns 200 with updated values", async (
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ description: "New desc", priority: "HIGH" }),
-    })
+    }),
   );
   expect(res.status).toBe(200);
   const body = (await res.json()) as Record<string, unknown>;
@@ -327,14 +321,14 @@ test("DELETE /v1/tickets/:id closes ticket returns 204", async () => {
         companyId,
         reportedById: reporterId,
       }),
-    })
+    }),
   );
   const ticket = (await createRes.json()) as { id: string };
 
   const res = await app.handle(
     new Request(`http://localhost/v1/tickets/${ticket.id}`, {
       method: "DELETE",
-    })
+    }),
   );
   expect(res.status).toBe(204);
 });
@@ -353,21 +347,21 @@ test("DELETE /v1/tickets/:id idempotent second DELETE returns 204", async () => 
         companyId,
         reportedById: reporterId,
       }),
-    })
+    }),
   );
   const ticket = (await createRes.json()) as { id: string };
 
   const res1 = await app.handle(
     new Request(`http://localhost/v1/tickets/${ticket.id}`, {
       method: "DELETE",
-    })
+    }),
   );
   expect(res1.status).toBe(204);
 
   const res2 = await app.handle(
     new Request(`http://localhost/v1/tickets/${ticket.id}`, {
       method: "DELETE",
-    })
+    }),
   );
   expect(res2.status).toBe(204);
 });
@@ -386,7 +380,7 @@ test("DELETE /v1/tickets/:id closed ticket absent from GET /v1/tickets", async (
         companyId,
         reportedById: reporterId,
       }),
-    })
+    }),
   );
   const ticket = (await createRes.json()) as { id: string };
 
@@ -396,13 +390,13 @@ test("DELETE /v1/tickets/:id closed ticket absent from GET /v1/tickets", async (
   await app.handle(
     new Request(`http://localhost/v1/tickets/${ticket.id}`, {
       method: "DELETE",
-    })
+    }),
   );
 
   const listAfter = await app.handle(new Request("http://localhost/v1/tickets"));
   const tickets = (await listAfter.json()) as unknown[];
   expect(tickets).toHaveLength(0);
-  expect(tickets.find((t: { id: string }) => t.id === ticket.id)).toBeUndefined();
+  expect(tickets.find((t) => (t as { id: string }).id === ticket.id)).toBeUndefined();
 });
 
 test("listTickets returns empty when no tickets (DB)", async () => {

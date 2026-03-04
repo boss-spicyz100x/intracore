@@ -1,8 +1,6 @@
 import { eq, isNull, and, ne } from "drizzle-orm";
-import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import { employees } from "./schema";
-
-export type AnyDB = BaseSQLiteDatabase<"async", any, any>;
+import type { AnyDB } from "./tickets";
 
 export type Employee = {
   id: string;
@@ -19,10 +17,7 @@ export type Employee = {
   deletedAt: string | null;
 };
 
-export async function listEmployees(
-  db: AnyDB,
-  companyId?: string
-): Promise<Employee[]> {
+export async function listEmployees(db: AnyDB, companyId?: string): Promise<Employee[]> {
   const conditions = companyId
     ? and(eq(employees.companyId, companyId), isNull(employees.deletedAt))
     : isNull(employees.deletedAt);
@@ -30,10 +25,7 @@ export async function listEmployees(
   return rows;
 }
 
-export async function getEmployeeById(
-  db: AnyDB,
-  id: string
-): Promise<Employee | null> {
+export async function getEmployeeById(db: AnyDB, id: string): Promise<Employee | null> {
   const [r] = await db
     .select()
     .from(employees)
@@ -45,7 +37,7 @@ export async function getEmployeeById(
 export async function getEmployeeByEmail(
   db: AnyDB,
   email: string,
-  excludeId?: string
+  excludeId?: string,
 ): Promise<Employee | null> {
   const conditions = excludeId
     ? and(eq(employees.email, email), ne(employees.id, excludeId), isNull(employees.deletedAt))
@@ -66,10 +58,7 @@ export type CreateEmployeeInput = {
   preferredLanguage?: string;
 };
 
-export async function createEmployee(
-  db: AnyDB,
-  input: CreateEmployeeInput
-): Promise<Employee> {
+export async function createEmployee(db: AnyDB, input: CreateEmployeeInput): Promise<Employee> {
   const now = new Date().toISOString();
   const [row] = await db
     .insert(employees)
@@ -103,7 +92,7 @@ export type UpdateEmployeeInput = {
 export async function updateEmployee(
   db: AnyDB,
   id: string,
-  input: UpdateEmployeeInput
+  input: UpdateEmployeeInput,
 ): Promise<Employee | null> {
   const now = new Date().toISOString();
   const values: Record<string, unknown> = { updatedAt: now };
@@ -112,8 +101,7 @@ export async function updateEmployee(
   if (input.phoneNumber !== undefined) values.phoneNumber = input.phoneNumber;
   if (input.department !== undefined) values.department = input.department;
   if (input.role !== undefined) values.role = input.role;
-  if (input.preferredLanguage !== undefined)
-    values.preferredLanguage = input.preferredLanguage;
+  if (input.preferredLanguage !== undefined) values.preferredLanguage = input.preferredLanguage;
 
   const [row] = await db
     .update(employees)
@@ -126,8 +114,5 @@ export async function updateEmployee(
 
 export async function softDeleteEmployee(db: AnyDB, id: string): Promise<void> {
   const now = new Date().toISOString();
-  await db
-    .update(employees)
-    .set({ deletedAt: now, updatedAt: now })
-    .where(eq(employees.id, id));
+  await db.update(employees).set({ deletedAt: now, updatedAt: now }).where(eq(employees.id, id));
 }
