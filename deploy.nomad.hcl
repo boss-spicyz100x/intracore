@@ -2,6 +2,10 @@ job "intracore" {
   datacenters = ["dc1"]
   type        = "service"
 
+  meta {
+    run_uuid = "${uuidv4()}"
+  }
+
   group "app" {
     count = 1
 
