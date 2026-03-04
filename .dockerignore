@@ -1,0 +1,13 @@
+node_modules/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.env*
+tests/
+.git/
+*.md
+drizzle.config.ts
+drizzle.server.config.ts
+wrangler.toml
+worker-configuration.d.ts
+index.ts
