@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <script src="/sdk/app-page-sdk.js"></script>
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <script type="importmap">
+      {
+        "imports": {
+          "@material/web/": "https://esm.run/@material/web/"
+        }
+      }
+    </script>
+    <script type="module">
+      import "@material/web/all.js";
+      import { styles as typescaleStyles } from "@material/web/typography/md-typescale-styles.js";
+
+      document.adoptedStyleSheets.push(typescaleStyles.styleSheet);
+    </script>
+    <style>
+      :root {
+        --google-blue: #1a73e8;
+        --google-blue-hover: #1765cc;
+        --text-primary: #202124;
+        --text-secondary: #5f6368;
+        --link-color: #1a73e8;
+        --border-color: #dadce0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Roboto", "Google Sans", system-ui, sans-serif;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 2rem 1.5rem;
+      }
+
+      .ticket-card {
+        width: 100%;
+        max-width: 500px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+      }
+
+      .ticket-header {
+        text-align: left;
+        margin-bottom: 2rem;
+      }
+
+      .ticket-header .emoji-icon {
+        margin: 0 0 0.5rem 0;
+        font-size: 48px;
+        line-height: 1;
+        display: block;
+      }
+
+      .ticket-header h1 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 500;
+        color: var(--text-primary);
+      }
+
+      .ticket-header .ticket-number {
+        margin: 0.25rem 0 0;
+        font-size: 14px;
+        color: var(--text-secondary);
+        font-weight: 400;
+      }
+
+      .detail-section {
+        margin-bottom: 1.5rem;
+      }
+
+      .detail-section-title {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0 0 0.5rem 0;
+      }
+
+      .detail-value {
+        font-size: 16px;
+        color: var(--text-primary);
+        margin: 0;
+      }
+
+      .detail-value.description {
+        white-space: pre-wrap;
+        line-height: 1.5;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .badge-status-NEW { background: #e8f0fe; color: #1a73e8; }
+      .badge-status-PENDING { background: #fef7e0; color: #b06000; }
+      .badge-status-RESOLVED { background: #e6f4ea; color: #137333; }
+      .badge-status-CANCELLED { background: #fce8e6; color: #c5221f; }
+      .badge-status-CLOSED { background: #f1f3f4; color: #5f6368; }
+      .badge-priority-LOW { background: #e6f4ea; color: #137333; }
+      .badge-priority-MEDIUM { background: #fef7e0; color: #b06000; }
+      .badge-priority-HIGH { background: #fce8e6; color: #c5221f; }
+
+      .meta-row {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .meta-row .label {
+        min-width: 100px;
+        font-size: 14px;
+        color: var(--text-secondary);
+      }
+
+      .meta-row .value {
+        font-size: 14px;
+        color: var(--text-primary);
+      }
+
+      #error-state {
+        text-align: center;
+        padding: 2rem;
+        color: #c5221f;
+      }
+
+      .page-footer {
+        margin-top: auto;
+        padding-top: 2rem;
+        width: 100%;
+        max-width: 500px;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ticket-card">
+      <div id="error-state" style="display: none;"></div>
+      <div id="ticket-content">
+        <div class="ticket-header">
+          <p class="emoji-icon">🎫</p>
+          <h1 id="i18n-title" class="md-typescale-headline-large">Ticket details</h1>
+          <p class="ticket-number" id="ticket-number"></p>
+        </div>
+
+        <div class="detail-section">
+          <p class="detail-section-title" id="i18n-status">Status</p>
+          <p class="detail-value"><span id="ticket-status" class="badge"></span></p>
+        </div>
+
+        <div class="detail-section">
+          <p class="detail-section-title" id="i18n-priority">Priority</p>
+          <p class="detail-value"><span id="ticket-priority" class="badge"></span></p>
+        </div>
+
+        <div class="detail-section" id="category-section">
+          <p class="detail-section-title" id="i18n-category">Category</p>
+          <p class="detail-value" id="ticket-category"></p>
+        </div>
+
+        <div class="detail-section">
+          <p class="detail-section-title" id="i18n-description">Description</p>
+          <p class="detail-value description" id="ticket-description"></p>
+        </div>
+
+        <div class="detail-section">
+          <p class="detail-section-title" id="i18n-company">Company</p>
+          <p class="detail-value" id="ticket-company"></p>
+        </div>
+
+        <div class="detail-section">
+          <p class="detail-section-title" id="i18n-reported">Reported by</p>
+          <div class="meta-row">
+            <span class="label" id="i18n-name">Name</span>
+            <span class="value" id="ticket-reported-name"></span>
+          </div>
+          <div class="meta-row">
+            <span class="label" id="i18n-email">Email</span>
+            <span class="value" id="ticket-reported-email"></span>
+          </div>
+        </div>
+
+        <div class="detail-section" id="assignee-section">
+          <p class="detail-section-title" id="i18n-assignee">Assignee</p>
+          <div class="meta-row">
+            <span class="label" id="i18n-assignee-name">Name</span>
+            <span class="value" id="ticket-assignee-name"></span>
+          </div>
+          <div class="meta-row">
+            <span class="label" id="i18n-assignee-email">Email</span>
+            <span class="value" id="ticket-assignee-email"></span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <p class="detail-section-title" id="i18n-dates">Dates</p>
+          <div class="meta-row">
+            <span class="label" id="i18n-created">Created</span>
+            <span class="value" id="ticket-created"></span>
+          </div>
+          <div class="meta-row">
+            <span class="label" id="i18n-updated">Updated</span>
+            <span class="value" id="ticket-updated"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <md-outlined-select id="lang-select" label="Language" aria-label="Language">
+        <md-select-option value="en">
+          <div slot="headline">English (United States)</div>
+        </md-select-option>
+        <md-select-option value="th">
+          <div slot="headline">ไทย</div>
+        </md-select-option>
+        <md-select-option value="ja">
+          <div slot="headline">日本語</div>
+        </md-select-option>
+        <md-select-option value="de">
+          <div slot="headline">Deutsch</div>
+        </md-select-option>
+      </md-outlined-select>
+    </footer>
+  </body>
+
+  <script>
+    const translations = {
+      en: {
+        title: 'Ticket details',
+        status: 'Status',
+        priority: 'Priority',
+        category: 'Category',
+        description: 'Description',
+        company: 'Company',
+        reported: 'Reported by',
+        assignee: 'Assignee',
+        dates: 'Dates',
+        name: 'Name',
+        email: 'Email',
+        created: 'Created',
+        updated: 'Updated',
+        error: 'Failed to load ticket'
+      },
+      th: {
+        title: 'รายละเอียดตั๋ว',
+        status: 'สถานะ',
+        priority: 'ความสำคัญ',
+        category: 'หมวดหมู่',
+        description: 'รายละเอียด',
+        company: 'บริษัท',
+        reported: 'รายงานโดย',
+        assignee: 'ผู้รับผิดชอบ',
+        dates: 'วันที่',
+        name: 'ชื่อ',
+        email: 'อีเมล',
+        created: 'สร้างเมื่อ',
+        updated: 'อัปเดตเมื่อ',
+        error: 'โหลดตั๋วไม่สำเร็จ'
+      },
+      ja: {
+        title: 'チケット詳細',
+        status: 'ステータス',
+        priority: '優先度',
+        category: 'カテゴリ',
+        description: '説明',
+        company: '会社',
+        reported: '報告者',
+        assignee: '担当者',
+        dates: '日付',
+        name: '名前',
+        email: 'メール',
+        created: '作成日時',
+        updated: '更新日時',
+        error: 'チケットの読み込みに失敗しました'
+      },
+      de: {
+        title: 'Ticket-Details',
+        status: 'Status',
+        priority: 'Priorität',
+        category: 'Kategorie',
+        description: 'Beschreibung',
+        company: 'Unternehmen',
+        reported: 'Gemeldet von',
+        assignee: 'Zuständig',
+        dates: 'Daten',
+        name: 'Name',
+        email: 'E-Mail',
+        created: 'Erstellt',
+        updated: 'Aktualisiert',
+        error: 'Ticket konnte nicht geladen werden'
+      }
+    };
+
+    function applyLanguage(lang) {
+      const t = translations[lang] || translations.en;
+      document.getElementById('i18n-title').textContent = t.title;
+      document.getElementById('i18n-status').textContent = t.status;
+      document.getElementById('i18n-priority').textContent = t.priority;
+      document.getElementById('i18n-category').textContent = t.category;
+      document.getElementById('i18n-description').textContent = t.description;
+      document.getElementById('i18n-company').textContent = t.company;
+      document.getElementById('i18n-reported').textContent = t.reported;
+      document.getElementById('i18n-assignee').textContent = t.assignee;
+      document.getElementById('i18n-dates').textContent = t.dates;
+      document.getElementById('i18n-name').textContent = t.name;
+      document.getElementById('i18n-email').textContent = t.email;
+      document.getElementById('i18n-assignee-name').textContent = t.name;
+      document.getElementById('i18n-assignee-email').textContent = t.email;
+      document.getElementById('i18n-created').textContent = t.created;
+      document.getElementById('i18n-updated').textContent = t.updated;
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '—';
+      try {
+        const d = new Date(iso);
+        return d.toLocaleString();
+      } catch {
+        return iso;
+      }
+    }
+
+    function renderTicket(ticket) {
+      document.getElementById('error-state').style.display = 'none';
+      document.getElementById('ticket-content').style.display = '';
+
+      document.getElementById('ticket-number').textContent = ticket.ticketNumber;
+      document.querySelector('h1').textContent = ticket.title;
+
+      const statusEl = document.getElementById('ticket-status');
+      statusEl.textContent = ticket.status;
+      statusEl.className = 'badge badge-status-' + ticket.status;
+
+      const priorityEl = document.getElementById('ticket-priority');
+      priorityEl.textContent = ticket.priority;
+      priorityEl.className = 'badge badge-priority-' + ticket.priority;
+
+      const categoryEl = document.getElementById('ticket-category');
+      categoryEl.textContent = ticket.category || '—';
+      document.getElementById('category-section').style.display = ticket.category ? 'block' : 'none';
+
+      document.getElementById('ticket-description').textContent = ticket.description || '—';
+      document.getElementById('ticket-company').textContent = ticket.company?.name || '—';
+
+      document.getElementById('ticket-reported-name').textContent = ticket.reportedBy?.fullName || '—';
+      document.getElementById('ticket-reported-email').textContent = ticket.reportedBy?.email || '—';
+
+      const assigneeSection = document.getElementById('assignee-section');
+      if (ticket.assignee) {
+        assigneeSection.style.display = 'block';
+        document.getElementById('ticket-assignee-name').textContent = ticket.assignee.fullName;
+        document.getElementById('ticket-assignee-email').textContent = ticket.assignee.email;
+      } else {
+        assigneeSection.style.display = 'none';
+      }
+
+      document.getElementById('ticket-created').textContent = formatDate(ticket.createdAt);
+      document.getElementById('ticket-updated').textContent = formatDate(ticket.updatedAt);
+    }
+
+    function showError(msg) {
+      document.getElementById('ticket-content').style.display = 'none';
+      const errEl = document.getElementById('error-state');
+      errEl.textContent = msg;
+      errEl.style.display = 'block';
+    }
+
+    const TICKET = {
+      ticketNumber: 'ACME-00001',
+      title: 'Sample ticket',
+      status: 'NEW',
+      priority: 'MEDIUM',
+      category: 'IT',
+      description: null,
+      company: { name: 'Acme Corp' },
+      reportedBy: { fullName: '—', email: '—' },
+      assignee: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const langSelect = document.getElementById('lang-select');
+    const savedLang = localStorage.getItem('ticket-detail-lang') || 'en';
+
+    langSelect.value = savedLang;
+    document.documentElement.lang = savedLang;
+    applyLanguage(savedLang);
+    renderTicket(TICKET);
+
+    langSelect.addEventListener('change', () => {
+      const lang = langSelect.value;
+      localStorage.setItem('ticket-detail-lang', lang);
+      document.documentElement.lang = lang;
+      applyLanguage(lang);
+    });
+  </script>
+</html>
