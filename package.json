@@ -4,10 +4,13 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "wrangler dev",
+    "dev:serverless": "wrangler dev",
+    "dev:server": "bun --hot server.ts",
     "deploy": "wrangler deploy",
     "generate": "drizzle-kit generate",
     "migrate:local": "wrangler d1 execute intracore --local --file=./migrations/0000_free_satana.sql",
+    "migrate:server": "drizzle-kit migrate --config=drizzle.server.config.ts",
+    "start:server": "bun server.ts",
     "test": "bun test"
   },
   "devDependencies": {
@@ -21,6 +24,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@elysiajs/swagger": "^1.3.1",
     "drizzle-orm": "^0.45.1",
     "elysia": "^1.4.27",
     "uuid": "^13.0.0"

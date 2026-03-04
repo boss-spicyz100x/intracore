@@ -6,7 +6,7 @@ import { companies, employees, tickets } from "./schema";
 const assignee = alias(employees, "assignee");
 const reportedBy = alias(employees, "reported_by");
 
-export type AnyDB = BaseSQLiteDatabase<"async", any, any>;
+export type AnyDB = BaseSQLiteDatabase<"sync" | "async", any, any>;
 
 export type TicketWithRelations = {
   id: string;
