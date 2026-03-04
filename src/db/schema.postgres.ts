@@ -1,4 +1,4 @@
-import { pgTable, text, integer, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const companies = pgTable("companies", {
   id: text("id").primaryKey(),
@@ -14,7 +14,7 @@ export const employees = pgTable(
   "employees",
   {
     id: text("id").primaryKey(),
-    employeeNumber: integer("employee_number").notNull(),
+    employeeNumber: text("employee_number").notNull(),
     fullName: text("full_name").notNull(),
     email: text("email").notNull().unique(),
     phoneNumber: text("phone_number").notNull(),

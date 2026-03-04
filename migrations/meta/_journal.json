@@ -8,6 +8,13 @@
       "when": 1772552032679,
       "tag": "0000_free_satana",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1772596536600,
+      "tag": "0001_premium_kinsey_walden",
+      "breakpoints": true
     }
   ]
 }

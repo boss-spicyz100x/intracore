@@ -440,7 +440,7 @@ test("getTicketById returns ticket with relations (DB)", async () => {
   const companyId = await seedCompany(db, { slug: "TESTCO" });
   const reporterId = await seedEmployee(db, companyId, {
     email: "r@test.com",
-    employeeNumber: 1,
+    employeeNumber: "001",
   });
   const ticketId = uuidv7();
   await createTicket(db, {
@@ -463,7 +463,7 @@ test("updateTicket updates description and priority (DB)", async () => {
   const companyId = await seedCompany(db, { slug: "UPD" });
   const reporterId = await seedEmployee(db, companyId, {
     email: "r@upd.com",
-    employeeNumber: 1,
+    employeeNumber: "001",
   });
   const ticketId = uuidv7();
   await createTicket(db, {
@@ -489,7 +489,7 @@ test("closeTicket sets closedAt and excludes from listTickets (DB)", async () =>
   const companyId = await seedCompany(db, { slug: "CLOSE" });
   const reporterId = await seedEmployee(db, companyId, {
     email: "r@close.com",
-    employeeNumber: 1,
+    employeeNumber: "001",
   });
   const ticketId = uuidv7();
   await createTicket(db, {
@@ -513,7 +513,7 @@ test("countTicketsByCompany and getCompanyById (DB)", async () => {
   const companyId = await seedCompany(db, { slug: "COUNTCO" });
   const reporterId = await seedEmployee(db, companyId, {
     email: "r@count.com",
-    employeeNumber: 1,
+    employeeNumber: "001",
   });
   const company = await getCompanyById(db, companyId);
   expect(company).not.toBeNull();

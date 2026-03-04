@@ -6,7 +6,7 @@ import { eq, and, isNull } from "drizzle-orm";
 const verifyBody = t.Object({
   phoneNumber: t.String({ minLength: 1 }),
   email: t.String({ format: "email" }),
-  employeeNumber: t.Number(),
+  employeeNumber: t.String({ minLength: 1 }),
 });
 
 const json = () => ({ "Content-Type": "application/json" }) as const;

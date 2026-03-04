@@ -12,7 +12,7 @@ import {
 import { getCompanyById } from "../../db/companies";
 
 const createEmployeeBody = t.Object({
-  employeeNumber: t.Number(),
+  employeeNumber: t.String({ minLength: 1 }),
   fullName: t.String({ minLength: 1 }),
   email: t.String({ format: "email" }),
   phoneNumber: t.String({ minLength: 1 }),
@@ -31,7 +31,7 @@ const updateEmployeeBody = t.Object({
   preferredLanguage: t.Optional(t.String()),
 });
 
-const json = () => ({ "Content-Type": "application/json" } as const);
+const json = () => ({ "Content-Type": "application/json" }) as const;
 
 export function employeesRouter(db: AnyDB) {
   return new Elysia({ prefix: "/v1/employees" })
@@ -46,7 +46,7 @@ export function employeesRouter(db: AnyDB) {
           companyId: t.Optional(t.String({ format: "uuid" })),
         }),
         detail: { summary: "List employees", tags: ["employees"] },
-      }
+      },
     )
     .post(
       "/",
@@ -58,7 +58,7 @@ export function employeesRouter(db: AnyDB) {
               error: "Not Found",
               message: "Company not found",
             }),
-            { status: 404, headers: json() }
+            { status: 404, headers: json() },
           );
         }
         const existingEmail = await getEmployeeByEmail(db, body.email);
@@ -68,7 +68,7 @@ export function employeesRouter(db: AnyDB) {
               error: "Conflict",
               message: "Employee email already exists",
             }),
-            { status: 409, headers: json() }
+            { status: 409, headers: json() },
           );
         }
         const employee = await createEmployee(db, {
@@ -87,7 +87,7 @@ export function employeesRouter(db: AnyDB) {
       {
         body: createEmployeeBody,
         detail: { summary: "Create employee", tags: ["employees"] },
-      }
+      },
     )
     .get(
       "/:id",
@@ -99,7 +99,7 @@ export function employeesRouter(db: AnyDB) {
               error: "Not Found",
               message: "Employee not found",
             }),
-            { status: 404, headers: json() }
+            { status: 404, headers: json() },
           );
         }
         return employee;
@@ -107,7 +107,7 @@ export function employeesRouter(db: AnyDB) {
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
         detail: { summary: "Get employee by ID", tags: ["employees"] },
-      }
+      },
     )
     .put(
       "/:id",
@@ -119,7 +119,7 @@ export function employeesRouter(db: AnyDB) {
               error: "Not Found",
               message: "Employee not found",
             }),
-            { status: 404, headers: json() }
+            { status: 404, headers: json() },
           );
         }
         if (body.email !== undefined) {
@@ -130,7 +130,7 @@ export function employeesRouter(db: AnyDB) {
                 error: "Conflict",
                 message: "Employee email already exists",
               }),
-              { status: 409, headers: json() }
+              { status: 409, headers: json() },
             );
           }
         }
@@ -148,7 +148,7 @@ export function employeesRouter(db: AnyDB) {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
         body: updateEmployeeBody,
         detail: { summary: "Update employee", tags: ["employees"] },
-      }
+      },
     )
     .delete(
       "/:id",
@@ -159,6 +159,6 @@ export function employeesRouter(db: AnyDB) {
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
         detail: { summary: "Soft-delete employee (idempotent)", tags: ["employees"] },
-      }
+      },
     );
 }

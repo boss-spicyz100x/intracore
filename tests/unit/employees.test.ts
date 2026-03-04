@@ -41,7 +41,7 @@ test("listEmployees returns non-deleted employees only", async () => {
   await db.insert(employees).values([
     {
       id: id1,
-      employeeNumber: 1,
+      employeeNumber: "001",
       fullName: "Jane",
       email: "jane@ing.com",
       phoneNumber: "+15551111111",
@@ -55,7 +55,7 @@ test("listEmployees returns non-deleted employees only", async () => {
     },
     {
       id: id2,
-      employeeNumber: 2,
+      employeeNumber: "002",
       fullName: "John",
       email: "john@ing.com",
       phoneNumber: "+15552222222",
@@ -103,7 +103,7 @@ test("listEmployees filters by companyId when provided", async () => {
   await db.insert(employees).values([
     {
       id: emp1,
-      employeeNumber: 1,
+      employeeNumber: "001",
       fullName: "E1",
       email: "e1@co1.com",
       phoneNumber: "+15551111111",
@@ -117,7 +117,7 @@ test("listEmployees filters by companyId when provided", async () => {
     },
     {
       id: emp2,
-      employeeNumber: 1,
+      employeeNumber: "001",
       fullName: "E2",
       email: "e2@co2.com",
       phoneNumber: "+15552222222",
@@ -142,7 +142,7 @@ test("getEmployeeById returns employee when found", async () => {
   const now = new Date().toISOString();
   await db.insert(employees).values({
     id,
-    employeeNumber: 1,
+    employeeNumber: "001",
     fullName: "Jane",
     email: "jane@ing.com",
     phoneNumber: "+15551111111",
@@ -174,7 +174,7 @@ test("getEmployeeById returns null when soft-deleted", async () => {
   const now = new Date().toISOString();
   await db.insert(employees).values({
     id,
-    employeeNumber: 1,
+    employeeNumber: "001",
     fullName: "Deleted",
     email: "del@ing.com",
     phoneNumber: "+15551111111",
@@ -197,7 +197,7 @@ test("getEmployeeByEmail returns employee when found", async () => {
   const now = new Date().toISOString();
   await db.insert(employees).values({
     id,
-    employeeNumber: 1,
+    employeeNumber: "001",
     fullName: "Jane",
     email: "jane@ing.com",
     phoneNumber: "+15551111111",
@@ -227,7 +227,7 @@ test("getEmployeeByEmail with excludeId excludes that employee", async () => {
   const now = new Date().toISOString();
   await db.insert(employees).values({
     id,
-    employeeNumber: 1,
+    employeeNumber: "001",
     fullName: "Jane",
     email: "jane@ing.com",
     phoneNumber: "+15551111111",
@@ -252,7 +252,7 @@ test("createEmployee inserts and returns employee", async () => {
   const id = uuidv7();
   const result = await createEmployee(db, {
     id,
-    employeeNumber: 1,
+    employeeNumber: "001",
     fullName: "Jane",
     email: "jane@ing.com",
     phoneNumber: "+15551111111",
@@ -274,7 +274,7 @@ test("updateEmployee updates and returns employee", async () => {
   const now = new Date().toISOString();
   await db.insert(employees).values({
     id,
-    employeeNumber: 1,
+    employeeNumber: "001",
     fullName: "Jane",
     email: "jane@ing.com",
     phoneNumber: "+15551111111",
@@ -304,7 +304,7 @@ test("updateEmployee partial update", async () => {
   const now = new Date().toISOString();
   await db.insert(employees).values({
     id,
-    employeeNumber: 1,
+    employeeNumber: "001",
     fullName: "Jane",
     email: "jane@ing.com",
     phoneNumber: "+15551111111",
@@ -335,7 +335,7 @@ test("updateEmployee returns null when soft-deleted", async () => {
   const now = new Date().toISOString();
   await db.insert(employees).values({
     id,
-    employeeNumber: 1,
+    employeeNumber: "001",
     fullName: "Deleted",
     email: "del@ing.com",
     phoneNumber: "+15551111111",
@@ -358,7 +358,7 @@ test("softDeleteEmployee sets deletedAt", async () => {
   const now = new Date().toISOString();
   await db.insert(employees).values({
     id,
-    employeeNumber: 1,
+    employeeNumber: "001",
     fullName: "Jane",
     email: "jane@ing.com",
     phoneNumber: "+15551111111",

@@ -4,7 +4,7 @@ import type { AnyDB } from "./tickets";
 
 export type Employee = {
   id: string;
-  employeeNumber: number;
+  employeeNumber: string;
   fullName: string;
   email: string;
   phoneNumber: string;
@@ -48,7 +48,7 @@ export async function getEmployeeByEmail(
 
 export type CreateEmployeeInput = {
   id: string;
-  employeeNumber: number;
+  employeeNumber: string;
   fullName: string;
   email: string;
   phoneNumber: string;

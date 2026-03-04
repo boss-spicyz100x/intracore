@@ -21,7 +21,7 @@ test("POST /v1/employees creates employee returns 200", async () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        employeeNumber: 1,
+        employeeNumber: "001",
         fullName: "Jane Doe",
         email: "jane@test.com",
         phoneNumber: "+15551234567",
@@ -30,13 +30,13 @@ test("POST /v1/employees creates employee returns 200", async () => {
         role: "Developer",
         preferredLanguage: "en-US",
       }),
-    })
+    }),
   );
   expect(res.status).toBe(200);
   const body = (await res.json()) as Record<string, unknown>;
   expect(body.fullName).toBe("Jane Doe");
   expect(body.email).toBe("jane@test.com");
-  expect(body.employeeNumber).toBe(1);
+  expect(body.employeeNumber).toBe("001");
   expect(body.department).toBe("Engineering");
   expect(body.role).toBe("Developer");
   expect(body.preferredLanguage).toBe("en-US");
@@ -58,7 +58,7 @@ test("POST /v1/employees missing required fields returns 422", async () => {
         phoneNumber: "+15551111111",
         companyId,
       }),
-    })
+    }),
   );
   expect(res.status).toBe(422);
 });
@@ -72,13 +72,13 @@ test("POST /v1/employees non-existent companyId returns 404", async () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        employeeNumber: 1,
+        employeeNumber: "001",
         fullName: "Jane",
         email: "jane@test.com",
         phoneNumber: "+15551234567",
         companyId: uuidv7(),
       }),
-    })
+    }),
   );
   expect(res.status).toBe(404);
   const body = await res.json();
@@ -98,13 +98,13 @@ test("POST /v1/employees duplicate email returns 409", async () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        employeeNumber: 1,
+        employeeNumber: "001",
         fullName: "First",
         email: "same@test.com",
         phoneNumber: "+15551111111",
         companyId,
       }),
-    })
+    }),
   );
   expect(create1.status).toBe(200);
 
@@ -113,13 +113,13 @@ test("POST /v1/employees duplicate email returns 409", async () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        employeeNumber: 2,
+        employeeNumber: "002",
         fullName: "Second",
         email: "same@test.com",
         phoneNumber: "+15552222222",
         companyId,
       }),
-    })
+    }),
   );
   expect(create2.status).toBe(409);
   const body = await create2.json();
@@ -138,19 +138,17 @@ test("GET /v1/employees/:id returns employee", async () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        employeeNumber: 1,
+        employeeNumber: "001",
         fullName: "Get Me",
         email: "getme@test.com",
         phoneNumber: "+15551234567",
         companyId,
       }),
-    })
+    }),
   );
   const employee = (await createRes.json()) as { id: string };
 
-  const res = await app.handle(
-    new Request(`http://localhost/v1/employees/${employee.id}`)
-  );
+  const res = await app.handle(new Request(`http://localhost/v1/employees/${employee.id}`));
   expect(res.status).toBe(200);
   const body = (await res.json()) as Record<string, unknown>;
   expect(body.id).toBe(employee.id);
@@ -161,9 +159,7 @@ test("GET /v1/employees/:id returns employee", async () => {
 test("GET /v1/employees/:id non-existent returns 404", async () => {
   const db = await createTestDb();
   const app = createTestApp(db);
-  const res = await app.handle(
-    new Request(`http://localhost/v1/employees/${uuidv7()}`)
-  );
+  const res = await app.handle(new Request(`http://localhost/v1/employees/${uuidv7()}`));
   expect(res.status).toBe(404);
   const body = await res.json();
   expect(body).toMatchObject({
@@ -183,33 +179,33 @@ test("GET /v1/employees?companyId= filters by company", async () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        employeeNumber: 1,
+        employeeNumber: "001",
         fullName: "Emp1",
         email: "e1@test.com",
         phoneNumber: "+15551111111",
         companyId: companyId1,
       }),
-    })
+    }),
   );
   await app.handle(
     new Request("http://localhost/v1/employees", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        employeeNumber: 1,
+        employeeNumber: "001",
         fullName: "Emp2",
         email: "e2@other.com",
         phoneNumber: "+15552222222",
         companyId: company2Id,
       }),
-    })
+    }),
   );
 
   const allRes = await app.handle(new Request("http://localhost/v1/employees"));
   expect((await allRes.json()) as unknown[]).toHaveLength(2);
 
   const filteredRes = await app.handle(
-    new Request(`http://localhost/v1/employees?companyId=${companyId1}`)
+    new Request(`http://localhost/v1/employees?companyId=${companyId1}`),
   );
   const filtered = (await filteredRes.json()) as unknown[];
   expect(filtered).toHaveLength(1);
@@ -225,13 +221,13 @@ test("PUT /v1/employees/:id updates employee", async () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        employeeNumber: 1,
+        employeeNumber: "001",
         fullName: "Original",
         email: "orig@test.com",
         phoneNumber: "+15551234567",
         companyId,
       }),
-    })
+    }),
   );
   const employee = (await createRes.json()) as { id: string };
 
@@ -247,7 +243,7 @@ test("PUT /v1/employees/:id updates employee", async () => {
         role: "Manager",
         preferredLanguage: "de-DE",
       }),
-    })
+    }),
   );
   expect(res.status).toBe(200);
   const body = (await res.json()) as Record<string, unknown>;
@@ -268,13 +264,13 @@ test("PUT /v1/employees/:id partial update", async () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        employeeNumber: 1,
+        employeeNumber: "001",
         fullName: "Partial",
         email: "partial@test.com",
         phoneNumber: "+15551234567",
         companyId,
       }),
-    })
+    }),
   );
   const employee = (await createRes.json()) as { id: string };
 
@@ -283,7 +279,7 @@ test("PUT /v1/employees/:id partial update", async () => {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ department: "HR only" }),
-    })
+    }),
   );
   expect(res.status).toBe(200);
   const body = (await res.json()) as Record<string, unknown>;
@@ -299,7 +295,7 @@ test("PUT /v1/employees/:id non-existent returns 404", async () => {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fullName: "Nope" }),
-    })
+    }),
   );
   expect(res.status).toBe(404);
 });
@@ -313,20 +309,20 @@ test("DELETE /v1/employees/:id returns 204", async () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        employeeNumber: 1,
+        employeeNumber: "001",
         fullName: "To Delete",
         email: "del@test.com",
         phoneNumber: "+15551234567",
         companyId,
       }),
-    })
+    }),
   );
   const employee = (await createRes.json()) as { id: string };
 
   const res = await app.handle(
     new Request(`http://localhost/v1/employees/${employee.id}`, {
       method: "DELETE",
-    })
+    }),
   );
   expect(res.status).toBe(204);
 });
@@ -340,27 +336,27 @@ test("DELETE /v1/employees/:id idempotent second DELETE returns 204", async () =
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        employeeNumber: 1,
+        employeeNumber: "001",
         fullName: "Twice",
         email: "twice@test.com",
         phoneNumber: "+15551234567",
         companyId,
       }),
-    })
+    }),
   );
   const employee = (await createRes.json()) as { id: string };
 
   const res1 = await app.handle(
     new Request(`http://localhost/v1/employees/${employee.id}`, {
       method: "DELETE",
-    })
+    }),
   );
   expect(res1.status).toBe(204);
 
   const res2 = await app.handle(
     new Request(`http://localhost/v1/employees/${employee.id}`, {
       method: "DELETE",
-    })
+    }),
   );
   expect(res2.status).toBe(204);
 });
@@ -374,13 +370,13 @@ test("DELETE /v1/employees/:id soft-deleted employee returns 404 on GET", async 
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        employeeNumber: 1,
+        employeeNumber: "001",
         fullName: "Soft Del",
         email: "softdel@test.com",
         phoneNumber: "+15551234567",
         companyId,
       }),
-    })
+    }),
   );
   const employee = (await createRes.json()) as { id: string };
 
@@ -390,14 +386,12 @@ test("DELETE /v1/employees/:id soft-deleted employee returns 404 on GET", async 
   await app.handle(
     new Request(`http://localhost/v1/employees/${employee.id}`, {
       method: "DELETE",
-    })
+    }),
   );
 
   const listAfter = await app.handle(new Request("http://localhost/v1/employees"));
   expect((await listAfter.json()) as unknown[]).toHaveLength(0);
 
-  const getRes = await app.handle(
-    new Request(`http://localhost/v1/employees/${employee.id}`)
-  );
+  const getRes = await app.handle(new Request(`http://localhost/v1/employees/${employee.id}`));
   expect(getRes.status).toBe(404);
 });

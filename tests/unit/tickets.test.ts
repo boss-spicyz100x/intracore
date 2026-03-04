@@ -29,7 +29,7 @@ async function seedCompanyAndEmployee(db: Awaited<ReturnType<typeof createTestDb
   });
   await db.insert(employees).values({
     id: reporterId,
-    employeeNumber: 1,
+    employeeNumber: "001",
     fullName: "Jane",
     email: "jane@ing.com",
     phoneNumber: "+15551111111",
@@ -266,7 +266,7 @@ test("getEmployeeById returns null when soft-deleted", async () => {
   const now = new Date().toISOString();
   await db.insert(employees).values({
     id,
-    employeeNumber: 2,
+    employeeNumber: "002",
     fullName: "Deleted",
     email: "del@ing.com",
     phoneNumber: "+15552222222",

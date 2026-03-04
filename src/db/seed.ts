@@ -32,7 +32,7 @@ await db
   .values([
     {
       id: EMP_001_ID,
-      employeeNumber: 1,
+      employeeNumber: "001",
       fullName: "Nutchanon Phongeon",
       email: "earth@100x.fi",
       phoneNumber: "+66620260001",
@@ -46,7 +46,7 @@ await db
     },
     {
       id: EMP_002_ID,
-      employeeNumber: 2,
+      employeeNumber: "002",
       fullName: "Supachai Kheawjuy",
       email: "boss.spicyz@100x.fi",
       phoneNumber: "+66620260002",
@@ -60,7 +60,7 @@ await db
     },
     {
       id: EMP_003_ID,
-      employeeNumber: 3,
+      employeeNumber: "003",
       fullName: "Patchanee Srisuk",
       email: "patchanee@100x.fi",
       phoneNumber: "+66620260003",
@@ -74,7 +74,7 @@ await db
     },
     {
       id: EMP_004_ID,
-      employeeNumber: 4,
+      employeeNumber: "004",
       fullName: "Thanakorn Wongsa",
       email: "thanakorn@100x.fi",
       phoneNumber: "+66620260004",

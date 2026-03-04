@@ -12,14 +12,21 @@ import { identityRouter } from "../src/routes/v1/identity";
 export async function createTestDb() {
   const sqlite = new Database(":memory:");
   const db = drizzle(sqlite, { schema });
-  const migration = Bun.file(import.meta.dir + "/../migrations/0000_free_satana.sql");
-  const sql = await migration.text();
-  const statements = sql
-    .split(/--> statement-breakpoint\n?/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  for (const stmt of statements) {
-    sqlite.run(stmt);
+  const migrationsDir = import.meta.dir + "/../migrations";
+  const files = (await Bun.$`ls ${migrationsDir}/*.sql`.text())
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .sort();
+  for (const file of files) {
+    const sql = await Bun.file(file).text();
+    const statements = sql
+      .split(/--> statement-breakpoint\n?/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    for (const stmt of statements) {
+      sqlite.run(stmt);
+    }
   }
   return db;
 }
@@ -56,7 +63,7 @@ export async function seedCompanyAndEmployees(db: Awaited<ReturnType<typeof crea
 
   await db.insert(employees).values({
     id: reporterId,
-    employeeNumber: 1,
+    employeeNumber: "001",
     fullName: "Jane Reporter",
     email: "jane@acme.com",
     phoneNumber: "+15551234567",
@@ -71,7 +78,7 @@ export async function seedCompanyAndEmployees(db: Awaited<ReturnType<typeof crea
 
   await db.insert(employees).values({
     id: assigneeId,
-    employeeNumber: 2,
+    employeeNumber: "002",
     fullName: "John Assignee",
     email: "john@acme.com",
     phoneNumber: "+15559876543",
@@ -110,12 +117,12 @@ export async function seedCompany(
 export async function seedEmployee(
   db: Awaited<ReturnType<typeof createTestDb>>,
   companyId: string,
-  opts?: { email?: string; employeeNumber?: number },
+  opts?: { email?: string; employeeNumber?: string },
 ) {
   const now = new Date().toISOString();
   const employeeId = uuidv7();
   const email = opts?.email ?? `emp-${employeeId.slice(0, 8)}@test.com`;
-  const employeeNumber = opts?.employeeNumber ?? 1;
+  const employeeNumber = opts?.employeeNumber ?? "001";
   await db.insert(employees).values({
     id: employeeId,
     employeeNumber,

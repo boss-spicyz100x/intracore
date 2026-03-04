@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const companies = sqliteTable("companies", {
   id: text("id").primaryKey(),
@@ -14,7 +14,7 @@ export const employees = sqliteTable(
   "employees",
   {
     id: text("id").primaryKey(),
-    employeeNumber: integer("employee_number").notNull(),
+    employeeNumber: text("employee_number").notNull(),
     fullName: text("full_name").notNull(),
     email: text("email").notNull().unique(),
     phoneNumber: text("phone_number").notNull(),
