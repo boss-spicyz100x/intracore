@@ -16,6 +16,7 @@ import {
   countTicketsByCompany,
   getCompanyById,
 } from "../../src/db/tickets";
+import { tickets } from "../../src/db/schema.postgres";
 
 test("GET /v1/tickets returns [] on empty DB", async () => {
   const db = await createTestDb();
@@ -222,6 +223,29 @@ test("POST /v1/tickets valid minimal payload returns 200 with ticket", async () 
   expect(body.company).toMatchObject({ slug: "ACME" });
 });
 
+test("POST /v1/tickets accepts lowercase category and priority returns 200", async () => {
+  const db = await createTestDb();
+  const { companyId, reporterId } = await seedCompanyAndEmployees(db);
+  const app = createTestApp(db);
+  const res = await app.handle(
+    new Request("http://localhost/v1/tickets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: "Facilities ticket",
+        companyId,
+        reportedById: reporterId,
+        category: "facilities",
+        priority: "high",
+      }),
+    }),
+  );
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as Record<string, unknown>;
+  expect(body.category).toBe("FACILITIES");
+  expect(body.priority).toBe("HIGH");
+});
+
 test("POST /v1/tickets sequential creates increment ticket numbers", async () => {
   const db = await createTestDb();
   const { companyId, reporterId } = await seedCompanyAndEmployees(db);
@@ -350,6 +374,60 @@ test("GET /v1/tickets/number/:ticketNumber invalid format returns 422", async ()
   expect(res.status).toBe(422);
 });
 
+test("GET /v1/tickets/number/:ticketNumber accepts lowercase and returns ticket", async () => {
+  const db = await createTestDb();
+  const { companyId, reporterId } = await seedCompanyAndEmployees(db);
+  const app = createTestApp(db);
+
+  const createRes = await app.handle(
+    new Request("http://localhost/v1/tickets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: "Lowercase lookup",
+        companyId,
+        reportedById: reporterId,
+      }),
+    }),
+  );
+  expect(createRes.status).toBe(200);
+  const ticket = (await createRes.json()) as { ticketNumber: string };
+  const ticketNumber = ticket.ticketNumber;
+
+  const res = await app.handle(
+    new Request(`http://localhost/v1/tickets/number/${ticketNumber.toLowerCase()}`),
+  );
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as Record<string, unknown>;
+  expect(body.ticketNumber).toBe("ACME-00001");
+  expect(body.title).toBeDefined();
+});
+
+test("GET /v1/tickets/number/:ticketNumber returns 404 for orphaned ticket data", async () => {
+  const db = await createTestDb();
+  const app = createTestApp(db);
+  await seedCompanyAndEmployees(db);
+
+  const now = new Date().toISOString();
+  await (db as any).insert(tickets).values({
+    id: uuidv7(),
+    ticketNumber: "ORPHAN-00001",
+    title: "Orphan",
+    companyId: uuidv7(),
+    reportedById: uuidv7(),
+    status: "NEW",
+    priority: "MEDIUM",
+    createdAt: now,
+    updatedAt: now,
+    closedAt: null,
+  });
+
+  const res = await app.handle(new Request("http://localhost/v1/tickets/number/ORPHAN-00001"));
+  expect(res.status).toBe(404);
+  const body = await res.json();
+  expect(body).toMatchObject({ error: "Not Found", message: "Ticket not found" });
+});
+
 test("PUT /v1/tickets/number/:ticketNumber valid update returns 200 with updated values", async () => {
   const db = await createTestDb();
   const { companyId, reporterId } = await seedCompanyAndEmployees(db);
@@ -383,6 +461,38 @@ test("PUT /v1/tickets/number/:ticketNumber valid update returns 200 with updated
   expect(body.description).toBe("Updated desc");
   expect(body.priority).toBe("HIGH");
   expect(body.status).toBe("PENDING");
+});
+
+test("PUT /v1/tickets/number/:ticketNumber accepts lowercase status and category", async () => {
+  const db = await createTestDb();
+  const { companyId, reporterId } = await seedCompanyAndEmployees(db);
+  const app = createTestApp(db);
+
+  const createRes = await app.handle(
+    new Request("http://localhost/v1/tickets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Update me", companyId, reportedById: reporterId }),
+    }),
+  );
+  const ticket = (await createRes.json()) as { ticketNumber: string };
+
+  const res = await app.handle(
+    new Request(`http://localhost/v1/tickets/number/${ticket.ticketNumber}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        status: "pending",
+        category: "facilities",
+        priority: "high",
+      }),
+    }),
+  );
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as Record<string, unknown>;
+  expect(body.status).toBe("PENDING");
+  expect(body.category).toBe("FACILITIES");
+  expect(body.priority).toBe("HIGH");
 });
 
 test("PUT /v1/tickets/number/:ticketNumber non-existent returns 404", async () => {

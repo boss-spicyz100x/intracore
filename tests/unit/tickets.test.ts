@@ -1,6 +1,6 @@
 import { test, expect } from "bun:test";
 import { v7 as uuidv7 } from "uuid";
-import { createTestDb } from "../helpers";
+import { createTestDb, seedCompany, seedEmployee } from "../helpers";
 import {
   listTickets,
   getTicketById,
@@ -13,7 +13,7 @@ import {
   getCompanyById,
   getEmployeeById,
 } from "../../src/db/tickets";
-import { companies, employees } from "../../src/db/schema.postgres";
+import { companies, employees, tickets } from "../../src/db/schema.postgres";
 
 async function seedCompanyAndEmployee(db: Awaited<ReturnType<typeof createTestDb>>) {
   const now = new Date().toISOString();
@@ -129,6 +129,66 @@ test("getTicketByTicketNumber returns null when not found", async () => {
   const db = await createTestDb();
   const result = await getTicketByTicketNumber(db, "ING-99999");
   expect(result).toBeNull();
+});
+
+test("getTicketByTicketNumber returns null when ticket has orphaned company", async () => {
+  const db = await createTestDb();
+  const { reporterId } = await seedCompanyAndEmployee(db);
+  const now = new Date().toISOString();
+  await db.insert(tickets).values({
+    id: uuidv7(),
+    ticketNumber: "ORPHAN-00001",
+    title: "Orphan",
+    companyId: uuidv7(),
+    reportedById: reporterId,
+    status: "NEW",
+    priority: "MEDIUM",
+    createdAt: now,
+    updatedAt: now,
+    closedAt: null,
+  });
+  const result = await getTicketByTicketNumber(db, "ORPHAN-00001");
+  expect(result).toBeNull();
+});
+
+test("getTicketByTicketNumber returns null when ticket has orphaned reporter", async () => {
+  const db = await createTestDb();
+  const { companyId } = await seedCompanyAndEmployee(db);
+  const now = new Date().toISOString();
+  await db.insert(tickets).values({
+    id: uuidv7(),
+    ticketNumber: "ORPHAN-00002",
+    title: "Orphan",
+    companyId,
+    reportedById: uuidv7(),
+    status: "NEW",
+    priority: "MEDIUM",
+    createdAt: now,
+    updatedAt: now,
+    closedAt: null,
+  });
+  const result = await getTicketByTicketNumber(db, "ORPHAN-00002");
+  expect(result).toBeNull();
+});
+
+test("getTicketByTicketNumber returns ticket when given lowercase ticket number", async () => {
+  const db = await createTestDb();
+  const companyId = await seedCompany(db, { slug: "BDS" });
+  const reporterId = await seedEmployee(db, companyId, {
+    email: "b@bds.com",
+    employeeNumber: "001",
+  });
+  await createTicket(db, {
+    id: uuidv7(),
+    ticketNumber: "BDS-00001",
+    title: "Lowercase",
+    companyId,
+    reportedById: reporterId,
+  });
+  const result = await getTicketByTicketNumber(db, "bds-00001");
+  expect(result).not.toBeNull();
+  expect(result!.ticketNumber).toBe("BDS-00001");
+  expect(result!.title).toBe("Lowercase");
 });
 
 test("createTicket inserts and returns ticket", async () => {

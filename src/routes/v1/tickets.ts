@@ -14,34 +14,40 @@ import {
   getTicketHistory,
 } from "../../db/tickets";
 
+const CATEGORIES = ["IT", "FACILITIES", "MISCELLANEOUS"] as const;
+const PRIORITIES = ["LOW", "MEDIUM", "HIGH"] as const;
+const STATUSES = ["NEW", "PENDING", "RESOLVED", "CANCELLED", "CLOSED"] as const;
+
+function normalizeEnum<T extends string>(
+  value: string | undefined,
+  allowed: readonly T[],
+  name: string,
+): T | undefined {
+  if (value === undefined || value === null) return undefined;
+  const norm = value.toUpperCase();
+  if (allowed.includes(norm as T)) return norm as T;
+  throw error(400, {
+    error: "Bad Request",
+    message: `Invalid ${name}: must be one of ${allowed.join(", ")}`,
+  });
+}
+
 const createTicketBody = t.Object({
   title: t.String({ minLength: 1 }),
   companyId: t.String({ format: "uuid" }),
   reportedById: t.String({ format: "uuid" }),
   description: t.Optional(t.String()),
-  priority: t.Optional(t.Union([t.Literal("LOW"), t.Literal("MEDIUM"), t.Literal("HIGH")])),
-  category: t.Optional(
-    t.Union([t.Literal("IT"), t.Literal("FACILITIES"), t.Literal("MISCELLANEOUS")]),
-  ),
+  priority: t.Optional(t.String()),
+  category: t.Optional(t.String()),
   assigneeId: t.Optional(t.Union([t.String({ format: "uuid" }), t.Null()])),
 });
 
 const updateTicketBody = t.Object({
   title: t.Optional(t.String({ minLength: 1 })),
   description: t.Optional(t.String()),
-  status: t.Optional(
-    t.Union([
-      t.Literal("NEW"),
-      t.Literal("PENDING"),
-      t.Literal("RESOLVED"),
-      t.Literal("CANCELLED"),
-      t.Literal("CLOSED"),
-    ]),
-  ),
-  priority: t.Optional(t.Union([t.Literal("LOW"), t.Literal("MEDIUM"), t.Literal("HIGH")])),
-  category: t.Optional(
-    t.Union([t.Literal("IT"), t.Literal("FACILITIES"), t.Literal("MISCELLANEOUS")]),
-  ),
+  status: t.Optional(t.String()),
+  priority: t.Optional(t.String()),
+  category: t.Optional(t.String()),
   assigneeId: t.Optional(t.Union([t.String({ format: "uuid" }), t.Null()])),
 });
 
@@ -71,9 +77,9 @@ export function ticketsRouter(db: AnyDB) {
         }
         const tickets = await getTicketHistory(db, {
           employeeId: query.employeeId,
-          status: query.status,
-          category: query.category,
-          priority: query.priority,
+          status: normalizeEnum(query.status, STATUSES, "status"),
+          category: normalizeEnum(query.category, CATEGORIES, "category"),
+          priority: normalizeEnum(query.priority, PRIORITIES, "priority"),
           dateFrom: query.dateFrom,
           dateTo: query.dateTo,
         });
@@ -82,19 +88,9 @@ export function ticketsRouter(db: AnyDB) {
       {
         query: t.Object({
           employeeId: t.Optional(t.String({ format: "uuid" })),
-          status: t.Optional(
-            t.Union([
-              t.Literal("NEW"),
-              t.Literal("PENDING"),
-              t.Literal("RESOLVED"),
-              t.Literal("CANCELLED"),
-              t.Literal("CLOSED"),
-            ]),
-          ),
-          category: t.Optional(
-            t.Union([t.Literal("IT"), t.Literal("FACILITIES"), t.Literal("MISCELLANEOUS")]),
-          ),
-          priority: t.Optional(t.Union([t.Literal("LOW"), t.Literal("MEDIUM"), t.Literal("HIGH")])),
+          status: t.Optional(t.String()),
+          category: t.Optional(t.String()),
+          priority: t.Optional(t.String()),
           dateFrom: t.Optional(t.String()),
           dateTo: t.Optional(t.String()),
         }),
@@ -140,8 +136,8 @@ export function ticketsRouter(db: AnyDB) {
           companyId: body.companyId,
           reportedById: body.reportedById,
           assigneeId,
-          priority: body.priority,
-          category: body.category,
+          priority: normalizeEnum(body.priority, PRIORITIES, "priority"),
+          category: normalizeEnum(body.category, CATEGORIES, "category"),
         });
         const full = await getTicketById(db, ticket.id);
         return full;
@@ -168,7 +164,7 @@ export function ticketsRouter(db: AnyDB) {
       },
       {
         params: t.Object({
-          ticketNumber: t.String({ pattern: "^[A-Z0-9]+-\\d+$" }),
+          ticketNumber: t.String({ pattern: "^[A-Za-z0-9]+-\\d+$" }),
         }),
         detail: {
           summary: "Get ticket by ticket number",
@@ -198,9 +194,9 @@ export function ticketsRouter(db: AnyDB) {
         const updated = await updateTicket(db, existing.id, {
           title: body.title,
           description: body.description,
-          status: body.status,
-          priority: body.priority,
-          category: body.category,
+          status: normalizeEnum(body.status, STATUSES, "status"),
+          priority: normalizeEnum(body.priority, PRIORITIES, "priority"),
+          category: normalizeEnum(body.category, CATEGORIES, "category"),
           assigneeId: body.assigneeId,
         });
         if (!updated) return existing;
@@ -208,7 +204,7 @@ export function ticketsRouter(db: AnyDB) {
       },
       {
         params: t.Object({
-          ticketNumber: t.String({ pattern: "^[A-Z0-9]+-\\d+$" }),
+          ticketNumber: t.String({ pattern: "^[A-Za-z0-9]+-\\d+$" }),
         }),
         body: updateTicketBody,
         detail: {
@@ -232,7 +228,7 @@ export function ticketsRouter(db: AnyDB) {
       },
       {
         params: t.Object({
-          ticketNumber: t.String({ pattern: "^[A-Z0-9]+-\\d+$" }),
+          ticketNumber: t.String({ pattern: "^[A-Za-z0-9]+-\\d+$" }),
         }),
         detail: {
           summary: "Close ticket by ticket number (idempotent)",
@@ -282,9 +278,9 @@ export function ticketsRouter(db: AnyDB) {
         const updated = await updateTicket(db, params.id, {
           title: body.title,
           description: body.description,
-          status: body.status,
-          priority: body.priority,
-          category: body.category,
+          status: normalizeEnum(body.status, STATUSES, "status"),
+          priority: normalizeEnum(body.priority, PRIORITIES, "priority"),
+          category: normalizeEnum(body.category, CATEGORIES, "category"),
           assigneeId: body.assigneeId,
         });
         if (!updated) return existing;

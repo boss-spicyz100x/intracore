@@ -59,7 +59,10 @@ function toTicketWithRelations(
   row: TicketRow,
   employeeMap: Map<string, EmployeeRow>,
   companyMap: Map<string, CompanyRow>,
-): TicketWithRelations {
+): TicketWithRelations | null {
+  const reportedBy = employeeMap.get(row.reportedById);
+  const company = companyMap.get(row.companyId);
+  if (reportedBy === undefined || company === undefined) return null;
   return {
     id: row.id,
     ticketNumber: row.ticketNumber,
@@ -72,15 +75,17 @@ function toTicketWithRelations(
     updatedAt: row.updatedAt,
     closedAt: row.closedAt,
     assignee: row.assigneeId ? (employeeMap.get(row.assigneeId) ?? null) : null,
-    reportedBy: employeeMap.get(row.reportedById)!,
-    company: companyMap.get(row.companyId)!,
+    reportedBy,
+    company,
   };
 }
 
 export async function listTickets(db: AnyDB): Promise<TicketWithRelations[]> {
   const rows = await db.select().from(tickets).where(isNull(tickets.closedAt));
   const { employeeMap, companyMap } = await fetchRelations(db, rows);
-  return rows.map((r) => toTicketWithRelations(r, employeeMap, companyMap));
+  return rows
+    .map((r) => toTicketWithRelations(r, employeeMap, companyMap))
+    .filter((t): t is TicketWithRelations => t !== null);
 }
 
 export async function getTicketById(db: AnyDB, id: string): Promise<TicketWithRelations | null> {
@@ -95,11 +100,8 @@ export async function getTicketByTicketNumber(
   db: AnyDB,
   ticketNumber: string,
 ): Promise<TicketWithRelations | null> {
-  const rows = await db
-    .select()
-    .from(tickets)
-    .where(eq(tickets.ticketNumber, ticketNumber))
-    .limit(1);
+  const normalized = ticketNumber.toUpperCase();
+  const rows = await db.select().from(tickets).where(eq(tickets.ticketNumber, normalized)).limit(1);
   const row = rows[0];
   if (!row) return null;
   const { employeeMap, companyMap } = await fetchRelations(db, [row]);
@@ -202,7 +204,9 @@ export async function getTicketHistory(
     .from(tickets)
     .where(and(...conditions));
   const { employeeMap, companyMap } = await fetchRelations(db, rows);
-  return rows.map((r) => toTicketWithRelations(r, employeeMap, companyMap));
+  return rows
+    .map((r) => toTicketWithRelations(r, employeeMap, companyMap))
+    .filter((t): t is TicketWithRelations => t !== null);
 }
 
 export async function closeTicket(db: AnyDB, id: string): Promise<boolean> {
