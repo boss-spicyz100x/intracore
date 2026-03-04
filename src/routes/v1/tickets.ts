@@ -176,6 +176,47 @@ export function ticketsRouter(db: AnyDB) {
         },
       },
     )
+    .put(
+      "/number/:ticketNumber",
+      async ({ params, body }) => {
+        const existing = await getTicketByTicketNumber(db, params.ticketNumber);
+        if (!existing) {
+          throw error(404, {
+            error: "Not Found",
+            message: "Ticket not found",
+          });
+        }
+        if (body.assigneeId !== undefined && body.assigneeId !== null) {
+          const assignee = await getEmployeeById(db, body.assigneeId);
+          if (!assignee) {
+            throw error(404, {
+              error: "Not Found",
+              message: "Assignee employee not found",
+            });
+          }
+        }
+        const updated = await updateTicket(db, existing.id, {
+          title: body.title,
+          description: body.description,
+          status: body.status,
+          priority: body.priority,
+          category: body.category,
+          assigneeId: body.assigneeId,
+        });
+        if (!updated) return existing;
+        return getTicketById(db, existing.id);
+      },
+      {
+        params: t.Object({
+          ticketNumber: t.String({ pattern: "^[A-Z0-9]+-\\d+$" }),
+        }),
+        body: updateTicketBody,
+        detail: {
+          summary: "Update ticket by ticket number",
+          tags: ["tickets"],
+        },
+      },
+    )
     .get(
       "/:id",
       async ({ params }) => {

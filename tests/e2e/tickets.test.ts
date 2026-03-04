@@ -350,6 +350,95 @@ test("GET /v1/tickets/number/:ticketNumber invalid format returns 422", async ()
   expect(res.status).toBe(422);
 });
 
+test("PUT /v1/tickets/number/:ticketNumber valid update returns 200 with updated values", async () => {
+  const db = await createTestDb();
+  const { companyId, reporterId } = await seedCompanyAndEmployees(db);
+  const app = createTestApp(db);
+
+  const createRes = await app.handle(
+    new Request("http://localhost/v1/tickets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: "Original title",
+        description: "Old desc",
+        priority: "LOW",
+        companyId,
+        reportedById: reporterId,
+      }),
+    }),
+  );
+  const ticket = (await createRes.json()) as { ticketNumber: string };
+
+  const res = await app.handle(
+    new Request(`http://localhost/v1/tickets/number/${ticket.ticketNumber}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description: "Updated desc", priority: "HIGH", status: "PENDING" }),
+    }),
+  );
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as Record<string, unknown>;
+  expect(body.ticketNumber).toBe(ticket.ticketNumber);
+  expect(body.description).toBe("Updated desc");
+  expect(body.priority).toBe("HIGH");
+  expect(body.status).toBe("PENDING");
+});
+
+test("PUT /v1/tickets/number/:ticketNumber non-existent returns 404", async () => {
+  const db = await createTestDb();
+  const app = createTestApp(db);
+  const res = await app.handle(
+    new Request("http://localhost/v1/tickets/number/ACME-99999", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Nope" }),
+    }),
+  );
+  expect(res.status).toBe(404);
+  const body = await res.json();
+  expect(body).toMatchObject({ error: "Not Found", message: "Ticket not found" });
+});
+
+test("PUT /v1/tickets/number/:ticketNumber invalid format returns 422", async () => {
+  const db = await createTestDb();
+  const app = createTestApp(db);
+  const res = await app.handle(
+    new Request("http://localhost/v1/tickets/number/not-valid-format", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Nope" }),
+    }),
+  );
+  expect(res.status).toBe(422);
+});
+
+test("PUT /v1/tickets/number/:ticketNumber non-existent assigneeId returns 404", async () => {
+  const db = await createTestDb();
+  const { companyId, reporterId } = await seedCompanyAndEmployees(db);
+  const app = createTestApp(db);
+
+  const createRes = await app.handle(
+    new Request("http://localhost/v1/tickets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Test", companyId, reportedById: reporterId }),
+    }),
+  );
+  const ticket = (await createRes.json()) as { ticketNumber: string };
+
+  const res = await app.handle(
+    new Request(`http://localhost/v1/tickets/number/${ticket.ticketNumber}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assigneeId: uuidv7() }),
+    }),
+  );
+  expect(res.status).toBe(404);
+  const body = await res.json();
+  expect(body).toMatchObject({ error: "Not Found", message: "Assignee employee not found" });
+});
+
 test("PUT /v1/tickets/:id non-existent ticket returns 404", async () => {
   const db = await createTestDb();
   const app = createTestApp(db);
