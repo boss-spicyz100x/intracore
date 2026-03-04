@@ -1,11 +1,11 @@
 import { drizzle } from "drizzle-orm/bun-sql";
 import { companies, employees } from "./schema.postgres";
 
-const COMPANY_ID = "019694e0-1b80-7000-8000-000000000001";
-const EMP_001_ID = "019694e0-1b80-7000-8000-000000000002";
-const EMP_002_ID = "019694e0-1b80-7000-8000-000000000003";
-const EMP_003_ID = "019694e0-1b80-7000-8000-000000000004";
-const EMP_004_ID = "019694e0-1b80-7000-8000-000000000005";
+const COMPANY_ID = "019cb6f6-0779-70b0-8476-587694f7e6aa";
+const EMP_001_ID = "019cb6f6-077b-752d-a4d9-62f15e5e5240";
+const EMP_002_ID = "019cb6f6-077b-752d-a4d9-66f8e05f09a3";
+const EMP_003_ID = "019cb6f6-077b-752d-a4d9-69cfcae5d50e";
+const EMP_004_ID = "019cb6f6-077b-752d-a4d9-6ec2aa1e43c5";
 
 const db = drizzle({
   connection: process.env.DATABASE_URL!,
