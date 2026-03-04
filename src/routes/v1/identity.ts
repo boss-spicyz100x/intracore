@@ -1,4 +1,4 @@
-import { Elysia, t, status as error } from "elysia";
+import { Elysia, t } from "elysia";
 import type { AnyDB } from "../../db/tickets";
 import { employees } from "../../db/schema.postgres";
 import { eq, and, isNull } from "drizzle-orm";
@@ -12,7 +12,7 @@ const verifyBody = t.Object({
 export function identityRouter(db: AnyDB) {
   return new Elysia({ prefix: "/v1/identity" }).post(
     "/verify",
-    async ({ body }) => {
+    async ({ body, set }) => {
       const [r] = await db
         .select({
           id: employees.id,
@@ -32,10 +32,11 @@ export function identityRouter(db: AnyDB) {
         .limit(1);
 
       if (!r) {
-        throw error(401, {
+        set.status = 401;
+        return {
           error: "Unauthorized",
           message: "Identity verification failed",
-        });
+        };
       }
 
       return {
