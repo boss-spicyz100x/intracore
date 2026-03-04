@@ -10,6 +10,7 @@ import {
   countTicketsByCompany,
   getCompanyById,
   getEmployeeById,
+  getTicketHistory,
 } from "../../db/tickets";
 
 const createTicketBody = t.Object({
@@ -31,10 +32,28 @@ const createTicketBody = t.Object({
 });
 
 const updateTicketBody = t.Object({
+  title: t.Optional(t.String({ minLength: 1 })),
   description: t.Optional(t.String()),
+  status: t.Optional(
+    t.Union([
+      t.Literal("NEW"),
+      t.Literal("PENDING"),
+      t.Literal("RESOLVED"),
+      t.Literal("CANCELLED"),
+      t.Literal("CLOSED"),
+    ])
+  ),
   priority: t.Optional(
     t.Union([t.Literal("LOW"), t.Literal("MEDIUM"), t.Literal("HIGH")])
   ),
+  category: t.Optional(
+    t.Union([
+      t.Literal("IT"),
+      t.Literal("FACILITIES"),
+      t.Literal("MISCELLANEOUS"),
+    ])
+  ),
+  assigneeId: t.Optional(t.Union([t.String({ format: "uuid" }), t.Null()])),
 });
 
 export function ticketsRouter(db: AnyDB) {
@@ -52,6 +71,59 @@ export function ticketsRouter(db: AnyDB) {
       },
     }
   )
+    .get(
+      "/history",
+      async ({ query }) => {
+        if (!query.employeeId) {
+          return new Response(
+            JSON.stringify({
+              error: "Bad Request",
+              message: "employeeId is required",
+            }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        const tickets = await getTicketHistory(db, {
+          employeeId: query.employeeId,
+          status: query.status,
+          category: query.category,
+          priority: query.priority,
+          dateFrom: query.dateFrom,
+          dateTo: query.dateTo,
+        });
+        return tickets;
+      },
+      {
+        query: t.Object({
+          employeeId: t.Optional(t.String({ format: "uuid" })),
+          status: t.Optional(
+            t.Union([
+              t.Literal("NEW"),
+              t.Literal("PENDING"),
+              t.Literal("RESOLVED"),
+              t.Literal("CANCELLED"),
+              t.Literal("CLOSED"),
+            ])
+          ),
+          category: t.Optional(
+            t.Union([
+              t.Literal("IT"),
+              t.Literal("FACILITIES"),
+              t.Literal("MISCELLANEOUS"),
+            ])
+          ),
+          priority: t.Optional(
+            t.Union([t.Literal("LOW"), t.Literal("MEDIUM"), t.Literal("HIGH")])
+          ),
+          dateFrom: t.Optional(t.String()),
+          dateTo: t.Optional(t.String()),
+        }),
+        detail: {
+          summary: "Get ticket history for employee",
+          tags: ["tickets"],
+        },
+      }
+    )
     .post(
       "/",
       async ({ body }) => {
@@ -146,9 +218,25 @@ export function ticketsRouter(db: AnyDB) {
             { status: 404, headers: { "Content-Type": "application/json" } }
           );
         }
+        if (body.assigneeId !== undefined && body.assigneeId !== null) {
+          const assignee = await getEmployeeById(db, body.assigneeId);
+          if (!assignee) {
+            return new Response(
+              JSON.stringify({
+                error: "Not Found",
+                message: "Assignee employee not found",
+              }),
+              { status: 404, headers: { "Content-Type": "application/json" } }
+            );
+          }
+        }
         const updated = await updateTicket(db, params.id, {
+          title: body.title,
           description: body.description,
+          status: body.status,
           priority: body.priority,
+          category: body.category,
+          assigneeId: body.assigneeId,
         });
         if (!updated) return existing;
         return getTicketById(db, params.id);
@@ -157,7 +245,7 @@ export function ticketsRouter(db: AnyDB) {
       params: t.Object({ id: t.String({ format: "uuid" }) }),
       body: updateTicketBody,
       detail: {
-        summary: "Update ticket (description, priority only)",
+        summary: "Update ticket",
         tags: ["tickets"],
       },
     }

@@ -1,108 +1,21 @@
 import { test, expect } from "bun:test";
-import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
 import { v7 as uuidv7 } from "uuid";
-import { Elysia } from "elysia";
-import * as schema from "../src/db/schema";
-import { companies, employees } from "../src/db/schema";
-import { ticketsRouter } from "../src/routes/v1/tickets";
-
-async function createTestDb() {
-  const sqlite = new Database(":memory:");
-  const db = drizzle(sqlite, { schema });
-  const migration = Bun.file(
-    import.meta.dir + "/../migrations/0000_free_satana.sql"
-  );
-  const sql = await migration.text();
-  const statements = sql
-    .split(/--> statement-breakpoint\n?/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  for (const stmt of statements) {
-    sqlite.run(stmt);
-  }
-  return db;
-}
-
-function createTestApp(db: Awaited<ReturnType<typeof createTestDb>>) {
-  const healthResponse = () => ({
-    status: "ok",
-    timestamp: new Date().toISOString(),
-  });
-  return new Elysia()
-    .get("/", healthResponse)
-    .get("/health", healthResponse)
-    .use(ticketsRouter(db));
-}
-
-async function seedCompanyAndEmployees(db: Awaited<ReturnType<typeof createTestDb>>) {
-  const now = new Date().toISOString();
-  const companyId = uuidv7();
-  const reporterId = uuidv7();
-  const assigneeId = uuidv7();
-
-  await db.insert(companies).values({
-    id: companyId,
-    slug: "acme",
-    name: "Acme Corp",
-    description: null,
-    createdAt: now,
-    updatedAt: now,
-    deletedAt: null,
-  });
-
-  await db.insert(employees).values({
-    id: reporterId,
-    employeeNumber: 1,
-    fullName: "Jane Reporter",
-    email: "jane@acme.com",
-    phoneNumber: "+15551234567",
-    department: null,
-    role: null,
-    preferredLanguage: "en-US",
-    companyId,
-    createdAt: now,
-    updatedAt: now,
-    deletedAt: null,
-  });
-
-  await db.insert(employees).values({
-    id: assigneeId,
-    employeeNumber: 2,
-    fullName: "John Assignee",
-    email: "john@acme.com",
-    phoneNumber: "+15559876543",
-    department: null,
-    role: null,
-    preferredLanguage: "en-US",
-    companyId,
-    createdAt: now,
-    updatedAt: now,
-    deletedAt: null,
-  });
-
-  return { companyId, reporterId, assigneeId };
-}
-
-test("GET / returns 200 with status ok", async () => {
-  const db = await createTestDb();
-  const app = createTestApp(db);
-  const res = await app.handle(new Request("http://localhost/"));
-  expect(res.status).toBe(200);
-  const body = await res.json();
-  expect(body).toMatchObject({ status: "ok" });
-  expect(body.timestamp).toBeDefined();
-});
-
-test("GET /health returns 200 with status ok", async () => {
-  const db = await createTestDb();
-  const app = createTestApp(db);
-  const res = await app.handle(new Request("http://localhost/health"));
-  expect(res.status).toBe(200);
-  const body = await res.json();
-  expect(body).toMatchObject({ status: "ok" });
-  expect(body.timestamp).toBeDefined();
-});
+import {
+  createTestDb,
+  createTestApp,
+  seedCompanyAndEmployees,
+  seedCompany,
+  seedEmployee,
+} from "../helpers";
+import {
+  listTickets,
+  getTicketById,
+  createTicket,
+  updateTicket,
+  closeTicket,
+  countTicketsByCompany,
+  getCompanyById,
+} from "../../src/db/tickets";
 
 test("GET /v1/tickets returns [] on empty DB", async () => {
   const db = await createTestDb();
@@ -263,10 +176,10 @@ test("POST /v1/tickets valid minimal payload returns 200 with ticket", async () 
   expect(res.status).toBe(200);
   const body = (await res.json()) as Record<string, unknown>;
   expect(body.title).toBe("First ticket");
-  expect(body.ticketNumber).toBe("acme-00001");
+  expect(body.ticketNumber).toBe("ACME-00001");
   expect(body.id).toBeDefined();
   expect(body.reportedBy).toMatchObject({ fullName: "Jane Reporter" });
-  expect(body.company).toMatchObject({ slug: "acme" });
+  expect(body.company).toMatchObject({ slug: "ACME" });
 });
 
 test("POST /v1/tickets sequential creates increment ticket numbers", async () => {
@@ -286,7 +199,7 @@ test("POST /v1/tickets sequential creates increment ticket numbers", async () =>
     })
   );
   const ticket1 = (await res1.json()) as { ticketNumber: string };
-  expect(ticket1.ticketNumber).toBe("acme-00001");
+  expect(ticket1.ticketNumber).toBe("ACME-00001");
 
   const res2 = await app.handle(
     new Request("http://localhost/v1/tickets", {
@@ -300,7 +213,7 @@ test("POST /v1/tickets sequential creates increment ticket numbers", async () =>
     })
   );
   const ticket2 = (await res2.json()) as { ticketNumber: string };
-  expect(ticket2.ticketNumber).toBe("acme-00002");
+  expect(ticket2.ticketNumber).toBe("ACME-00002");
 });
 
 test("GET /v1/tickets/:id valid ticket returns 200 with relations", async () => {
@@ -331,7 +244,7 @@ test("GET /v1/tickets/:id valid ticket returns 200 with relations", async () => 
   expect(body.title).toBe("Get me");
   expect(body.reportedBy).toMatchObject({ fullName: "Jane Reporter" });
   expect(body.assignee).toMatchObject({ fullName: "John Assignee" });
-  expect(body.company).toMatchObject({ slug: "acme" });
+  expect(body.company).toMatchObject({ slug: "ACME" });
 });
 
 test("GET /v1/tickets/:id non-existent UUID returns 404", async () => {
@@ -490,4 +403,142 @@ test("DELETE /v1/tickets/:id closed ticket absent from GET /v1/tickets", async (
   const tickets = (await listAfter.json()) as unknown[];
   expect(tickets).toHaveLength(0);
   expect(tickets.find((t: { id: string }) => t.id === ticket.id)).toBeUndefined();
+});
+
+test("listTickets returns empty when no tickets (DB)", async () => {
+  const db = await createTestDb();
+  const result = await listTickets(db);
+  expect(result).toEqual([]);
+});
+
+test("createTicket and listTickets (DB)", async () => {
+  const db = await createTestDb();
+  const { companyId, reporterId, assigneeId } = await seedCompanyAndEmployees(db);
+  const ticketId = uuidv7();
+  await createTicket(db, {
+    id: ticketId,
+    ticketNumber: "ACME-00001",
+    title: "Test ticket",
+    description: "A test",
+    companyId,
+    reportedById: reporterId,
+    assigneeId,
+    priority: "HIGH",
+    category: "IT",
+  });
+  const list = await listTickets(db);
+  expect(list).toHaveLength(1);
+  expect(list[0]!.title).toBe("Test ticket");
+  expect(list[0]!.ticketNumber).toBe("ACME-00001");
+  expect(list[0]!.assignee?.fullName).toBe("John Assignee");
+  expect(list[0]!.reportedBy.fullName).toBe("Jane Reporter");
+  expect(list[0]!.company.slug).toBe("ACME");
+});
+
+test("getTicketById returns null for missing ticket (DB)", async () => {
+  const db = await createTestDb();
+  const result = await getTicketById(db, uuidv7());
+  expect(result).toBeNull();
+});
+
+test("getTicketById returns ticket with relations (DB)", async () => {
+  const db = await createTestDb();
+  const companyId = await seedCompany(db, { slug: "TESTCO" });
+  const reporterId = await seedEmployee(db, companyId, {
+    email: "r@test.com",
+    employeeNumber: 1,
+  });
+  const ticketId = uuidv7();
+  await createTicket(db, {
+    id: ticketId,
+    ticketNumber: "TESTCO-00001",
+    title: "Get me",
+    companyId,
+    reportedById: reporterId,
+  });
+  const ticket = await getTicketById(db, ticketId);
+  expect(ticket).not.toBeNull();
+  expect(ticket!.id).toBe(ticketId);
+  expect(ticket!.title).toBe("Get me");
+  expect(ticket!.assignee).toBeNull();
+  expect(ticket!.reportedBy.fullName).toBe("Test Employee");
+});
+
+test("updateTicket updates description and priority (DB)", async () => {
+  const db = await createTestDb();
+  const companyId = await seedCompany(db, { slug: "UPD" });
+  const reporterId = await seedEmployee(db, companyId, {
+    email: "r@upd.com",
+    employeeNumber: 1,
+  });
+  const ticketId = uuidv7();
+  await createTicket(db, {
+    id: ticketId,
+    ticketNumber: "UPD-00001",
+    title: "Original",
+    description: "Old desc",
+    companyId,
+    reportedById: reporterId,
+    priority: "MEDIUM",
+  });
+  const updated = await updateTicket(db, ticketId, {
+    description: "New desc",
+    priority: "HIGH",
+  });
+  expect(updated).not.toBeNull();
+  expect(updated!.description).toBe("New desc");
+  expect(updated!.priority).toBe("HIGH");
+});
+
+test("closeTicket sets closedAt and excludes from listTickets (DB)", async () => {
+  const db = await createTestDb();
+  const companyId = await seedCompany(db, { slug: "CLOSE" });
+  const reporterId = await seedEmployee(db, companyId, {
+    email: "r@close.com",
+    employeeNumber: 1,
+  });
+  const ticketId = uuidv7();
+  await createTicket(db, {
+    id: ticketId,
+    ticketNumber: "CLOSE-00001",
+    title: "To close",
+    companyId,
+    reportedById: reporterId,
+  });
+  expect(await listTickets(db)).toHaveLength(1);
+  const closed = await closeTicket(db, ticketId);
+  expect(closed).toBe(true);
+  expect(await listTickets(db)).toHaveLength(0);
+  const ticket = await getTicketById(db, ticketId);
+  expect(ticket).not.toBeNull();
+  expect(ticket!.closedAt).not.toBeNull();
+});
+
+test("countTicketsByCompany and getCompanyById (DB)", async () => {
+  const db = await createTestDb();
+  const companyId = await seedCompany(db, { slug: "COUNTCO" });
+  const reporterId = await seedEmployee(db, companyId, {
+    email: "r@count.com",
+    employeeNumber: 1,
+  });
+  const company = await getCompanyById(db, companyId);
+  expect(company).not.toBeNull();
+  expect(company!.slug).toBe("COUNTCO");
+  expect(await countTicketsByCompany(db, companyId)).toBe(0);
+  await createTicket(db, {
+    id: uuidv7(),
+    ticketNumber: "COUNTCO-00001",
+    title: "First",
+    companyId,
+    reportedById: reporterId,
+  });
+  expect(await countTicketsByCompany(db, companyId)).toBe(1);
+  await createTicket(db, {
+    id: uuidv7(),
+    ticketNumber: "COUNTCO-00002",
+    title: "Second",
+    companyId,
+    reportedById: reporterId,
+  });
+  expect(await countTicketsByCompany(db, companyId)).toBe(2);
 });

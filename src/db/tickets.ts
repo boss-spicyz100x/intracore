@@ -1,4 +1,4 @@
-import { eq, isNull, count } from "drizzle-orm";
+import { eq, isNull, count, and, gte, lte } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import { companies, employees, tickets } from "./schema";
@@ -191,8 +191,12 @@ export async function createTicket(
 }
 
 export type UpdateTicketInput = {
+  title?: string;
   description?: string;
+  status?: "NEW" | "PENDING" | "RESOLVED" | "CANCELLED" | "CLOSED";
   priority?: "LOW" | "MEDIUM" | "HIGH";
+  category?: "IT" | "FACILITIES" | "MISCELLANEOUS";
+  assigneeId?: string | null;
 };
 
 export async function updateTicket(
@@ -202,8 +206,12 @@ export async function updateTicket(
 ): Promise<(typeof tickets.$inferSelect) | null> {
   const now = new Date().toISOString();
   const values: Record<string, unknown> = { updatedAt: now };
+  if (input.title !== undefined) values.title = input.title;
   if (input.description !== undefined) values.description = input.description;
+  if (input.status !== undefined) values.status = input.status;
   if (input.priority !== undefined) values.priority = input.priority;
+  if (input.category !== undefined) values.category = input.category;
+  if (input.assigneeId !== undefined) values.assigneeId = input.assigneeId ?? null;
 
   const [row] = await db
     .update(tickets)
@@ -212,6 +220,85 @@ export async function updateTicket(
     .returning();
 
   return row ?? null;
+}
+
+export type TicketHistoryFilters = {
+  employeeId: string;
+  status?: "NEW" | "PENDING" | "RESOLVED" | "CANCELLED" | "CLOSED";
+  category?: "IT" | "FACILITIES" | "MISCELLANEOUS";
+  priority?: "LOW" | "MEDIUM" | "HIGH";
+  dateFrom?: string;
+  dateTo?: string;
+};
+
+export async function getTicketHistory(
+  db: AnyDB,
+  filters: TicketHistoryFilters
+): Promise<TicketWithRelations[]> {
+  const conditions = [eq(tickets.reportedById, filters.employeeId)];
+  if (filters.status !== undefined) conditions.push(eq(tickets.status, filters.status));
+  if (filters.category !== undefined) conditions.push(eq(tickets.category, filters.category));
+  if (filters.priority !== undefined) conditions.push(eq(tickets.priority, filters.priority));
+  if (filters.dateFrom !== undefined) conditions.push(gte(tickets.createdAt, filters.dateFrom));
+  if (filters.dateTo !== undefined) conditions.push(lte(tickets.createdAt, filters.dateTo));
+
+  const rows = await db
+    .select({
+      id: tickets.id,
+      ticketNumber: tickets.ticketNumber,
+      title: tickets.title,
+      description: tickets.description,
+      status: tickets.status,
+      priority: tickets.priority,
+      category: tickets.category,
+      createdAt: tickets.createdAt,
+      updatedAt: tickets.updatedAt,
+      closedAt: tickets.closedAt,
+      assigneeId: assignee.id,
+      assigneeFullName: assignee.fullName,
+      assigneeEmail: assignee.email,
+      reportedById: reportedBy.id,
+      reportedByFullName: reportedBy.fullName,
+      reportedByEmail: reportedBy.email,
+      companyId: companies.id,
+      companySlug: companies.slug,
+      companyName: companies.name,
+    })
+    .from(tickets)
+    .leftJoin(assignee, eq(tickets.assigneeId, assignee.id))
+    .innerJoin(reportedBy, eq(tickets.reportedById, reportedBy.id))
+    .innerJoin(companies, eq(tickets.companyId, companies.id))
+    .where(and(...conditions));
+
+  return rows.map((r) => ({
+    id: r.id,
+    ticketNumber: r.ticketNumber,
+    title: r.title,
+    description: r.description,
+    status: r.status,
+    priority: r.priority,
+    category: r.category,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+    closedAt: r.closedAt,
+    assignee: r.assigneeId
+      ? {
+          id: r.assigneeId,
+          fullName: r.assigneeFullName!,
+          email: r.assigneeEmail!,
+        }
+      : null,
+    reportedBy: {
+      id: r.reportedById!,
+      fullName: r.reportedByFullName!,
+      email: r.reportedByEmail!,
+    },
+    company: {
+      id: r.companyId!,
+      slug: r.companySlug!,
+      name: r.companyName!,
+    },
+  }));
 }
 
 export async function closeTicket(db: AnyDB, id: string): Promise<boolean> {
@@ -243,7 +330,7 @@ export async function getCompanyById(
   const [r] = await db
     .select({ id: companies.id, slug: companies.slug })
     .from(companies)
-    .where(eq(companies.id, id))
+    .where(and(eq(companies.id, id), isNull(companies.deletedAt)))
     .limit(1);
   return r ?? null;
 }
@@ -255,7 +342,7 @@ export async function getEmployeeById(
   const [r] = await db
     .select({ id: employees.id })
     .from(employees)
-    .where(eq(employees.id, id))
+    .where(and(eq(employees.id, id), isNull(employees.deletedAt)))
     .limit(1);
   return r ?? null;
 }
