@@ -2,8 +2,8 @@ import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { v7 as uuidv7 } from "uuid";
 import { Elysia } from "elysia";
-import * as schema from "../src/db/schema";
-import { companies, employees } from "../src/db/schema";
+import * as schema from "../src/db/schema.sqlite";
+import { companies, employees } from "../src/db/schema.sqlite";
 import { ticketsRouter } from "../src/routes/v1/tickets";
 import { companiesRouter } from "../src/routes/v1/companies";
 import { employeesRouter } from "../src/routes/v1/employees";
@@ -12,9 +12,7 @@ import { identityRouter } from "../src/routes/v1/identity";
 export async function createTestDb() {
   const sqlite = new Database(":memory:");
   const db = drizzle(sqlite, { schema });
-  const migration = Bun.file(
-    import.meta.dir + "/../migrations/0000_free_satana.sql"
-  );
+  const migration = Bun.file(import.meta.dir + "/../migrations/0000_free_satana.sql");
   const sql = await migration.text();
   const statements = sql
     .split(/--> statement-breakpoint\n?/)
@@ -40,9 +38,7 @@ export function createTestApp(db: Awaited<ReturnType<typeof createTestDb>>) {
     .use(identityRouter(db));
 }
 
-export async function seedCompanyAndEmployees(
-  db: Awaited<ReturnType<typeof createTestDb>>
-) {
+export async function seedCompanyAndEmployees(db: Awaited<ReturnType<typeof createTestDb>>) {
   const now = new Date().toISOString();
   const companyId = uuidv7();
   const reporterId = uuidv7();
@@ -93,7 +89,7 @@ export async function seedCompanyAndEmployees(
 
 export async function seedCompany(
   db: Awaited<ReturnType<typeof createTestDb>>,
-  opts?: { slug?: string; name?: string }
+  opts?: { slug?: string; name?: string },
 ) {
   const now = new Date().toISOString();
   const companyId = uuidv7();
@@ -114,7 +110,7 @@ export async function seedCompany(
 export async function seedEmployee(
   db: Awaited<ReturnType<typeof createTestDb>>,
   companyId: string,
-  opts?: { email?: string; employeeNumber?: number }
+  opts?: { email?: string; employeeNumber?: number },
 ) {
   const now = new Date().toISOString();
   const employeeId = uuidv7();

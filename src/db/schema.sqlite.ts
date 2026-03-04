@@ -1,9 +1,4 @@
-import {
-  sqliteTable,
-  text,
-  integer,
-  uniqueIndex,
-} from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const companies = sqliteTable("companies", {
   id: text("id").primaryKey(),
@@ -25,9 +20,7 @@ export const employees = sqliteTable(
     phoneNumber: text("phone_number").notNull(),
     department: text("department"),
     role: text("role"),
-    preferredLanguage: text("preferred_language")
-      .notNull()
-      .default("en-US"),
+    preferredLanguage: text("preferred_language").notNull().default("en-US"),
     companyId: text("company_id")
       .notNull()
       .references(() => companies.id),
@@ -38,9 +31,9 @@ export const employees = sqliteTable(
   (table) => ({
     companyEmployeeNumIdx: uniqueIndex("company_employee_num_idx").on(
       table.companyId,
-      table.employeeNumber
+      table.employeeNumber,
     ),
-  })
+  }),
 );
 
 export const tickets = sqliteTable("tickets", {

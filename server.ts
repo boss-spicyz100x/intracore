@@ -1,15 +1,13 @@
-import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
+import { drizzle } from "drizzle-orm/bun-sql";
 import { swagger } from "@elysiajs/swagger";
 import { Elysia } from "elysia";
-import * as schema from "./src/db/schema";
+import * as schema from "./src/db/schema.sqlite";
 import { ticketsRouter } from "./src/routes/v1/tickets";
 import { companiesRouter } from "./src/routes/v1/companies";
 import { employeesRouter } from "./src/routes/v1/employees";
 import { identityRouter } from "./src/routes/v1/identity";
 
-const sqlite = new Database(process.env.DATABASE_PATH ?? "./intracore.sqlite");
-const db = drizzle(sqlite, { schema });
+const db = drizzle({ connection: process.env.DATABASE_URL!, schema } as any);
 
 const healthResponse = () => ({
   status: "ok",
@@ -27,12 +25,12 @@ new Elysia()
           version: "1.0.0",
         },
       },
-    })
+    }),
   )
   .get("/", healthResponse)
   .get("/health", healthResponse)
-  .use(ticketsRouter(db))
-  .use(companiesRouter(db))
-  .use(employeesRouter(db))
-  .use(identityRouter(db))
+  .use(ticketsRouter(db as any))
+  .use(companiesRouter(db as any))
+  .use(employeesRouter(db as any))
+  .use(identityRouter(db as any))
   .listen(process.env.PORT ?? 3000);

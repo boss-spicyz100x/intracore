@@ -9,7 +9,7 @@ import {
   updateCompany,
   softDeleteCompany,
 } from "../../src/db/companies";
-import { companies } from "../../src/db/schema";
+import { companies } from "../../src/db/schema.sqlite";
 
 test("listCompanies returns empty when no companies", async () => {
   const db = await createTestDb();

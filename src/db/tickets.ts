@@ -1,7 +1,7 @@
 import { eq, isNull, count, and, gte, lte } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
-import { companies, employees, tickets } from "./schema";
+import { companies, employees, tickets } from "./schema.sqlite";
 
 const assignee = alias(employees, "assignee");
 const reportedBy = alias(employees, "reported_by");
@@ -84,10 +84,7 @@ export async function listTickets(db: AnyDB): Promise<TicketWithRelations[]> {
   }));
 }
 
-export async function getTicketById(
-  db: AnyDB,
-  id: string
-): Promise<TicketWithRelations | null> {
+export async function getTicketById(db: AnyDB, id: string): Promise<TicketWithRelations | null> {
   const rows = await db
     .select({
       id: tickets.id,
@@ -165,8 +162,8 @@ export type CreateTicketInput = {
 
 export async function createTicket(
   db: AnyDB,
-  input: CreateTicketInput
-): Promise<(typeof tickets.$inferSelect)> {
+  input: CreateTicketInput,
+): Promise<typeof tickets.$inferSelect> {
   const now = new Date().toISOString();
   const [row] = await db
     .insert(tickets)
@@ -202,8 +199,8 @@ export type UpdateTicketInput = {
 export async function updateTicket(
   db: AnyDB,
   id: string,
-  input: UpdateTicketInput
-): Promise<(typeof tickets.$inferSelect) | null> {
+  input: UpdateTicketInput,
+): Promise<typeof tickets.$inferSelect | null> {
   const now = new Date().toISOString();
   const values: Record<string, unknown> = { updatedAt: now };
   if (input.title !== undefined) values.title = input.title;
@@ -233,7 +230,7 @@ export type TicketHistoryFilters = {
 
 export async function getTicketHistory(
   db: AnyDB,
-  filters: TicketHistoryFilters
+  filters: TicketHistoryFilters,
 ): Promise<TicketWithRelations[]> {
   const conditions = [eq(tickets.reportedById, filters.employeeId)];
   if (filters.status !== undefined) conditions.push(eq(tickets.status, filters.status));
@@ -312,20 +309,14 @@ export async function closeTicket(db: AnyDB, id: string): Promise<boolean> {
   return row !== undefined;
 }
 
-export async function countTicketsByCompany(
-  db: AnyDB,
-  companyId: string
-): Promise<number> {
-  const [r] = await db
-    .select({ n: count() })
-    .from(tickets)
-    .where(eq(tickets.companyId, companyId));
+export async function countTicketsByCompany(db: AnyDB, companyId: string): Promise<number> {
+  const [r] = await db.select({ n: count() }).from(tickets).where(eq(tickets.companyId, companyId));
   return r?.n ?? 0;
 }
 
 export async function getCompanyById(
   db: AnyDB,
-  id: string
+  id: string,
 ): Promise<{ id: string; slug: string } | null> {
   const [r] = await db
     .select({ id: companies.id, slug: companies.slug })
@@ -335,10 +326,7 @@ export async function getCompanyById(
   return r ?? null;
 }
 
-export async function getEmployeeById(
-  db: AnyDB,
-  id: string
-): Promise<{ id: string } | null> {
+export async function getEmployeeById(db: AnyDB, id: string): Promise<{ id: string } | null> {
   const [r] = await db
     .select({ id: employees.id })
     .from(employees)

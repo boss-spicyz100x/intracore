@@ -9,7 +9,7 @@ import {
   updateEmployee,
   softDeleteEmployee,
 } from "../../src/db/employees";
-import { companies, employees } from "../../src/db/schema";
+import { companies, employees } from "../../src/db/schema.sqlite";
 
 async function seedCompany(db: Awaited<ReturnType<typeof createTestDb>>) {
   const now = new Date().toISOString();
@@ -79,8 +79,24 @@ test("listEmployees filters by companyId when provided", async () => {
   const co1 = uuidv7();
   const co2 = uuidv7();
   await db.insert(companies).values([
-    { id: co1, slug: "CO1", name: "Co1", description: null, createdAt: now, updatedAt: now, deletedAt: null },
-    { id: co2, slug: "CO2", name: "Co2", description: null, createdAt: now, updatedAt: now, deletedAt: null },
+    {
+      id: co1,
+      slug: "CO1",
+      name: "Co1",
+      description: null,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    },
+    {
+      id: co2,
+      slug: "CO2",
+      name: "Co2",
+      description: null,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    },
   ]);
   const emp1 = uuidv7();
   const emp2 = uuidv7();

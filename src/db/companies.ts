@@ -1,5 +1,5 @@
 import { eq, isNull, and, ne } from "drizzle-orm";
-import { companies } from "./schema";
+import { companies } from "./schema.sqlite";
 import type { AnyDB } from "./tickets";
 
 export type Company = {
