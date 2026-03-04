@@ -2,36 +2,62 @@ import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { v7 as uuidv7 } from "uuid";
 import { Elysia } from "elysia";
-import * as schema from "../src/db/schema.sqlite";
-import { companies, employees } from "../src/db/schema.sqlite";
+import { companies, employees } from "../src/db/schema.postgres";
+import type { AnyDB } from "../src/db/tickets";
 import { ticketsRouter } from "../src/routes/v1/tickets";
 import { companiesRouter } from "../src/routes/v1/companies";
 import { employeesRouter } from "../src/routes/v1/employees";
 import { identityRouter } from "../src/routes/v1/identity";
 
-export async function createTestDb() {
-  const sqlite = new Database(":memory:");
-  const db = drizzle(sqlite, { schema });
-  const migrationsDir = import.meta.dir + "/../migrations";
-  const files = (await Bun.$`ls ${migrationsDir}/*.sql`.text())
-    .trim()
-    .split("\n")
-    .filter(Boolean)
-    .sort();
-  for (const file of files) {
-    const sql = await Bun.file(file).text();
-    const statements = sql
-      .split(/--> statement-breakpoint\n?/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-    for (const stmt of statements) {
-      sqlite.run(stmt);
-    }
-  }
-  return db;
+function initSchema(sqlite: Database) {
+  sqlite.run(`CREATE TABLE companies (
+    id TEXT PRIMARY KEY,
+    slug TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT
+  )`);
+  sqlite.run(`CREATE TABLE employees (
+    id TEXT PRIMARY KEY,
+    employee_number TEXT NOT NULL,
+    full_name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    phone_number TEXT NOT NULL,
+    department TEXT,
+    role TEXT,
+    preferred_language TEXT NOT NULL DEFAULT 'en-US',
+    company_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT,
+    UNIQUE(company_id, employee_number)
+  )`);
+  sqlite.run(`CREATE TABLE tickets (
+    id TEXT PRIMARY KEY,
+    ticket_number TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'NEW',
+    priority TEXT NOT NULL DEFAULT 'MEDIUM',
+    category TEXT,
+    assignee_id TEXT,
+    reported_by_id TEXT NOT NULL,
+    company_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    closed_at TEXT
+  )`);
 }
 
-export function createTestApp(db: Awaited<ReturnType<typeof createTestDb>>) {
+export function createTestDb(): AnyDB {
+  const sqlite = new Database(":memory:");
+  initSchema(sqlite);
+  return drizzle(sqlite) as unknown as AnyDB;
+}
+
+export function createTestApp(db: AnyDB) {
   const healthResponse = () => ({
     status: "ok",
     timestamp: new Date().toISOString(),
@@ -45,13 +71,13 @@ export function createTestApp(db: Awaited<ReturnType<typeof createTestDb>>) {
     .use(identityRouter(db));
 }
 
-export async function seedCompanyAndEmployees(db: Awaited<ReturnType<typeof createTestDb>>) {
+export async function seedCompanyAndEmployees(db: AnyDB) {
   const now = new Date().toISOString();
   const companyId = uuidv7();
   const reporterId = uuidv7();
   const assigneeId = uuidv7();
 
-  await db.insert(companies).values({
+  await (db as any).insert(companies).values({
     id: companyId,
     slug: "ACME",
     name: "Acme Corp",
@@ -61,7 +87,7 @@ export async function seedCompanyAndEmployees(db: Awaited<ReturnType<typeof crea
     deletedAt: null,
   });
 
-  await db.insert(employees).values({
+  await (db as any).insert(employees).values({
     id: reporterId,
     employeeNumber: "001",
     fullName: "Jane Reporter",
@@ -76,7 +102,7 @@ export async function seedCompanyAndEmployees(db: Awaited<ReturnType<typeof crea
     deletedAt: null,
   });
 
-  await db.insert(employees).values({
+  await (db as any).insert(employees).values({
     id: assigneeId,
     employeeNumber: "002",
     fullName: "John Assignee",
@@ -94,15 +120,12 @@ export async function seedCompanyAndEmployees(db: Awaited<ReturnType<typeof crea
   return { companyId, reporterId, assigneeId };
 }
 
-export async function seedCompany(
-  db: Awaited<ReturnType<typeof createTestDb>>,
-  opts?: { slug?: string; name?: string },
-) {
+export async function seedCompany(db: AnyDB, opts?: { slug?: string; name?: string }) {
   const now = new Date().toISOString();
   const companyId = uuidv7();
   const slug = opts?.slug ?? "TESTCO";
   const name = opts?.name ?? "Test Co";
-  await db.insert(companies).values({
+  await (db as any).insert(companies).values({
     id: companyId,
     slug,
     name,
@@ -115,7 +138,7 @@ export async function seedCompany(
 }
 
 export async function seedEmployee(
-  db: Awaited<ReturnType<typeof createTestDb>>,
+  db: AnyDB,
   companyId: string,
   opts?: { email?: string; employeeNumber?: string },
 ) {
@@ -123,7 +146,7 @@ export async function seedEmployee(
   const employeeId = uuidv7();
   const email = opts?.email ?? `emp-${employeeId.slice(0, 8)}@test.com`;
   const employeeNumber = opts?.employeeNumber ?? "001";
-  await db.insert(employees).values({
+  await (db as any).insert(employees).values({
     id: employeeId,
     employeeNumber,
     fullName: "Test Employee",

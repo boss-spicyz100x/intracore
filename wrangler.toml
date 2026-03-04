@@ -1,9 +1,0 @@
-name = "intracore"
-main = "index.ts"
-compatibility_date = "2026-03-03"
-
-[[d1_databases]]
-binding = "DB"
-database_name = "intracore"
-database_id = "3110e8a3-b933-43cd-bb98-9361e905259c"
-migrations_dir = "migrations"

@@ -12,7 +12,7 @@ import {
   getCompanyById,
   getEmployeeById,
 } from "../../src/db/tickets";
-import { companies, employees } from "../../src/db/schema.sqlite";
+import { companies, employees } from "../../src/db/schema.postgres";
 
 async function seedCompanyAndEmployee(db: Awaited<ReturnType<typeof createTestDb>>) {
   const now = new Date().toISOString();

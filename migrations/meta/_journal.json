@@ -1,19 +1,19 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1772552032679,
-      "tag": "0000_free_satana",
+      "version": "7",
+      "when": 1772593342756,
+      "tag": "0000_nosy_surge",
       "breakpoints": true
     },
     {
       "idx": 1,
-      "version": "6",
-      "when": 1772596536600,
-      "tag": "0001_premium_kinsey_walden",
+      "version": "7",
+      "when": 1772596533656,
+      "tag": "0001_flashy_cyclops",
       "breakpoints": true
     }
   ]

@@ -9,7 +9,7 @@ import {
   updateEmployee,
   softDeleteEmployee,
 } from "../../src/db/employees";
-import { companies, employees } from "../../src/db/schema.sqlite";
+import { companies, employees } from "../../src/db/schema.postgres";
 
 async function seedCompany(db: Awaited<ReturnType<typeof createTestDb>>) {
   const now = new Date().toISOString();

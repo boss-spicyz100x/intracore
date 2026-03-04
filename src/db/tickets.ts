@@ -1,12 +1,8 @@
-import { eq, isNull, count, and, gte, lte } from "drizzle-orm";
-import { alias } from "drizzle-orm/sqlite-core";
-import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
-import { companies, employees, tickets } from "./schema.sqlite";
+import { eq, isNull, count, and, gte, lte, inArray } from "drizzle-orm";
+import type { BunSQLDatabase } from "drizzle-orm/bun-sql";
+import { companies, employees, tickets } from "./schema.postgres";
 
-const assignee = alias(employees, "assignee");
-const reportedBy = alias(employees, "reported_by");
-
-export type AnyDB = BaseSQLiteDatabase<"sync" | "async", any, any>;
+export type AnyDB = BunSQLDatabase<any>;
 
 export type TicketWithRelations = {
   id: string;
@@ -24,128 +20,75 @@ export type TicketWithRelations = {
   company: { id: string; slug: string; name: string };
 };
 
-export async function listTickets(db: AnyDB): Promise<TicketWithRelations[]> {
-  const rows = await db
-    .select({
-      id: tickets.id,
-      ticketNumber: tickets.ticketNumber,
-      title: tickets.title,
-      description: tickets.description,
-      status: tickets.status,
-      priority: tickets.priority,
-      category: tickets.category,
-      createdAt: tickets.createdAt,
-      updatedAt: tickets.updatedAt,
-      closedAt: tickets.closedAt,
-      assigneeId: assignee.id,
-      assigneeFullName: assignee.fullName,
-      assigneeEmail: assignee.email,
-      reportedById: reportedBy.id,
-      reportedByFullName: reportedBy.fullName,
-      reportedByEmail: reportedBy.email,
-      companyId: companies.id,
-      companySlug: companies.slug,
-      companyName: companies.name,
-    })
-    .from(tickets)
-    .leftJoin(assignee, eq(tickets.assigneeId, assignee.id))
-    .innerJoin(reportedBy, eq(tickets.reportedById, reportedBy.id))
-    .innerJoin(companies, eq(tickets.companyId, companies.id))
-    .where(isNull(tickets.closedAt));
+type EmployeeRow = { id: string; fullName: string; email: string };
+type CompanyRow = { id: string; slug: string; name: string };
+type TicketRow = typeof tickets.$inferSelect;
 
-  return rows.map((r) => ({
-    id: r.id,
-    ticketNumber: r.ticketNumber,
-    title: r.title,
-    description: r.description,
-    status: r.status,
-    priority: r.priority,
-    category: r.category,
-    createdAt: r.createdAt,
-    updatedAt: r.updatedAt,
-    closedAt: r.closedAt,
-    assignee: r.assigneeId
-      ? {
-          id: r.assigneeId,
-          fullName: r.assigneeFullName!,
-          email: r.assigneeEmail!,
-        }
-      : null,
-    reportedBy: {
-      id: r.reportedById!,
-      fullName: r.reportedByFullName!,
-      email: r.reportedByEmail!,
-    },
-    company: {
-      id: r.companyId!,
-      slug: r.companySlug!,
-      name: r.companyName!,
-    },
-  }));
+async function fetchRelations(
+  db: AnyDB,
+  rows: TicketRow[],
+): Promise<{ employeeMap: Map<string, EmployeeRow>; companyMap: Map<string, CompanyRow> }> {
+  if (rows.length === 0) return { employeeMap: new Map(), companyMap: new Map() };
+
+  const employeeIds = [
+    ...new Set([
+      ...rows.map((t) => t.reportedById),
+      ...rows.filter((t) => t.assigneeId).map((t) => t.assigneeId!),
+    ]),
+  ];
+  const companyIds = [...new Set(rows.map((t) => t.companyId))];
+
+  const [empRows, compRows] = await Promise.all([
+    db
+      .select({ id: employees.id, fullName: employees.fullName, email: employees.email })
+      .from(employees)
+      .where(inArray(employees.id, employeeIds)),
+    db
+      .select({ id: companies.id, slug: companies.slug, name: companies.name })
+      .from(companies)
+      .where(inArray(companies.id, companyIds)),
+  ]);
+
+  return {
+    employeeMap: new Map(empRows.map((e) => [e.id, e])),
+    companyMap: new Map(compRows.map((c) => [c.id, c])),
+  };
+}
+
+function toTicketWithRelations(
+  row: TicketRow,
+  employeeMap: Map<string, EmployeeRow>,
+  companyMap: Map<string, CompanyRow>,
+): TicketWithRelations {
+  return {
+    id: row.id,
+    ticketNumber: row.ticketNumber,
+    title: row.title,
+    description: row.description,
+    status: row.status,
+    priority: row.priority,
+    category: row.category,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    closedAt: row.closedAt,
+    assignee: row.assigneeId ? (employeeMap.get(row.assigneeId) ?? null) : null,
+    reportedBy: employeeMap.get(row.reportedById)!,
+    company: companyMap.get(row.companyId)!,
+  };
+}
+
+export async function listTickets(db: AnyDB): Promise<TicketWithRelations[]> {
+  const rows = await db.select().from(tickets).where(isNull(tickets.closedAt));
+  const { employeeMap, companyMap } = await fetchRelations(db, rows);
+  return rows.map((r) => toTicketWithRelations(r, employeeMap, companyMap));
 }
 
 export async function getTicketById(db: AnyDB, id: string): Promise<TicketWithRelations | null> {
-  const rows = await db
-    .select({
-      id: tickets.id,
-      ticketNumber: tickets.ticketNumber,
-      title: tickets.title,
-      description: tickets.description,
-      status: tickets.status,
-      priority: tickets.priority,
-      category: tickets.category,
-      createdAt: tickets.createdAt,
-      updatedAt: tickets.updatedAt,
-      closedAt: tickets.closedAt,
-      assigneeId: assignee.id,
-      assigneeFullName: assignee.fullName,
-      assigneeEmail: assignee.email,
-      reportedById: reportedBy.id,
-      reportedByFullName: reportedBy.fullName,
-      reportedByEmail: reportedBy.email,
-      companyId: companies.id,
-      companySlug: companies.slug,
-      companyName: companies.name,
-    })
-    .from(tickets)
-    .leftJoin(assignee, eq(tickets.assigneeId, assignee.id))
-    .innerJoin(reportedBy, eq(tickets.reportedById, reportedBy.id))
-    .innerJoin(companies, eq(tickets.companyId, companies.id))
-    .where(eq(tickets.id, id))
-    .limit(1);
-
-  const r = rows[0];
-  if (!r) return null;
-
-  return {
-    id: r.id,
-    ticketNumber: r.ticketNumber,
-    title: r.title,
-    description: r.description,
-    status: r.status,
-    priority: r.priority,
-    category: r.category,
-    createdAt: r.createdAt,
-    updatedAt: r.updatedAt,
-    closedAt: r.closedAt,
-    assignee: r.assigneeId
-      ? {
-          id: r.assigneeId,
-          fullName: r.assigneeFullName!,
-          email: r.assigneeEmail!,
-        }
-      : null,
-    reportedBy: {
-      id: r.reportedById!,
-      fullName: r.reportedByFullName!,
-      email: r.reportedByEmail!,
-    },
-    company: {
-      id: r.companyId!,
-      slug: r.companySlug!,
-      name: r.companyName!,
-    },
-  };
+  const rows = await db.select().from(tickets).where(eq(tickets.id, id)).limit(1);
+  const row = rows[0];
+  if (!row) return null;
+  const { employeeMap, companyMap } = await fetchRelations(db, [row]);
+  return toTicketWithRelations(row, employeeMap, companyMap);
 }
 
 export type CreateTicketInput = {
@@ -240,62 +183,11 @@ export async function getTicketHistory(
   if (filters.dateTo !== undefined) conditions.push(lte(tickets.createdAt, filters.dateTo));
 
   const rows = await db
-    .select({
-      id: tickets.id,
-      ticketNumber: tickets.ticketNumber,
-      title: tickets.title,
-      description: tickets.description,
-      status: tickets.status,
-      priority: tickets.priority,
-      category: tickets.category,
-      createdAt: tickets.createdAt,
-      updatedAt: tickets.updatedAt,
-      closedAt: tickets.closedAt,
-      assigneeId: assignee.id,
-      assigneeFullName: assignee.fullName,
-      assigneeEmail: assignee.email,
-      reportedById: reportedBy.id,
-      reportedByFullName: reportedBy.fullName,
-      reportedByEmail: reportedBy.email,
-      companyId: companies.id,
-      companySlug: companies.slug,
-      companyName: companies.name,
-    })
+    .select()
     .from(tickets)
-    .leftJoin(assignee, eq(tickets.assigneeId, assignee.id))
-    .innerJoin(reportedBy, eq(tickets.reportedById, reportedBy.id))
-    .innerJoin(companies, eq(tickets.companyId, companies.id))
     .where(and(...conditions));
-
-  return rows.map((r) => ({
-    id: r.id,
-    ticketNumber: r.ticketNumber,
-    title: r.title,
-    description: r.description,
-    status: r.status,
-    priority: r.priority,
-    category: r.category,
-    createdAt: r.createdAt,
-    updatedAt: r.updatedAt,
-    closedAt: r.closedAt,
-    assignee: r.assigneeId
-      ? {
-          id: r.assigneeId,
-          fullName: r.assigneeFullName!,
-          email: r.assigneeEmail!,
-        }
-      : null,
-    reportedBy: {
-      id: r.reportedById!,
-      fullName: r.reportedByFullName!,
-      email: r.reportedByEmail!,
-    },
-    company: {
-      id: r.companyId!,
-      slug: r.companySlug!,
-      name: r.companyName!,
-    },
-  }));
+  const { employeeMap, companyMap } = await fetchRelations(db, rows);
+  return rows.map((r) => toTicketWithRelations(r, employeeMap, companyMap));
 }
 
 export async function closeTicket(db: AnyDB, id: string): Promise<boolean> {

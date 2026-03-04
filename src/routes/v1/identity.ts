@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import type { AnyDB } from "../../db/tickets";
-import { employees } from "../../db/schema.sqlite";
+import { employees } from "../../db/schema.postgres";
 import { eq, and, isNull } from "drizzle-orm";
 
 const verifyBody = t.Object({

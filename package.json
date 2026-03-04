@@ -2,17 +2,12 @@
   "name": "intracore",
   "private": true,
   "type": "module",
-  "module": "index.ts",
   "scripts": {
-    "dev:serverless": "wrangler dev",
-    "dev:server": "bun --hot server.ts",
-    "deploy": "wrangler deploy",
-    "generate:serverless": "drizzle-kit generate --config=drizzle.serverless.config.ts",
-    "generate:server": "drizzle-kit generate --config=drizzle.server.config.ts",
-    "migrate:serverless": "wrangler d1 execute intracore --local --file=./migrations/0000_free_satana.sql",
-    "migrate:server": "drizzle-kit migrate --config=drizzle.server.config.ts",
-    "seed:server": "bun src/db/seed.ts",
-    "start:server": "bun server.ts",
+    "dev": "bun --hot server.ts",
+    "start": "bun server.ts",
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "seed": "bun src/db/seed.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint .",
@@ -26,7 +21,6 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260301.1",
     "@types/bun": "latest",
     "@types/uuid": "^11.0.0",
     "drizzle-kit": "^0.31.9",
@@ -34,8 +28,7 @@
     "lint-staged": "^16.3.2",
     "oxfmt": "^0.36.0",
     "oxlint": "^1.51.0",
-    "postgres": "^3.4.8",
-    "wrangler": "^4.69.0"
+    "postgres": "^3.4.8"
   },
   "peerDependencies": {
     "typescript": "^5"
