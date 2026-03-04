@@ -56,3 +56,39 @@ test("POST /v1/identity/verify non-matching identity returns 401", async () => {
     message: "Identity verification failed",
   });
 });
+
+test("POST /v1/identity/verify missing required fields returns 422", async () => {
+  const db = await createTestDb();
+  await seedCompanyAndEmployees(db);
+  const app = createTestApp(db);
+
+  const res = await app.handle(
+    new Request("http://localhost/v1/identity/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phoneNumber: "+15551234567" }),
+    }),
+  );
+
+  expect(res.status).toBe(422);
+});
+
+test("POST /v1/identity/verify invalid email format returns 422", async () => {
+  const db = await createTestDb();
+  await seedCompanyAndEmployees(db);
+  const app = createTestApp(db);
+
+  const res = await app.handle(
+    new Request("http://localhost/v1/identity/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phoneNumber: "+15551234567",
+        email: "not-an-email",
+        employeeNumber: "001",
+      }),
+    }),
+  );
+
+  expect(res.status).toBe(422);
+});

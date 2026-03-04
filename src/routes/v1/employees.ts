@@ -1,4 +1,5 @@
 import { Elysia, t, status as error } from "elysia";
+import { errorResponseSchema } from "../../openapi/schemas";
 import { v7 as uuidv7 } from "uuid";
 import type { AnyDB } from "../../db/tickets";
 import {
@@ -43,6 +44,7 @@ export function employeesRouter(db: AnyDB) {
         query: t.Object({
           companyId: t.Optional(t.String({ format: "uuid" })),
         }),
+        response: { 200: t.Any() },
         detail: { summary: "List employees", tags: ["employees"] },
       },
     )
@@ -78,6 +80,12 @@ export function employeesRouter(db: AnyDB) {
       },
       {
         body: createEmployeeBody,
+        response: {
+          200: t.Any(),
+          404: errorResponseSchema,
+          409: errorResponseSchema,
+          422: t.Any(),
+        },
         detail: { summary: "Create employee", tags: ["employees"] },
       },
     )
@@ -95,6 +103,11 @@ export function employeesRouter(db: AnyDB) {
       },
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
+        response: {
+          200: t.Any(),
+          404: errorResponseSchema,
+          422: t.Any(),
+        },
         detail: { summary: "Get employee by ID", tags: ["employees"] },
       },
     )
@@ -130,6 +143,12 @@ export function employeesRouter(db: AnyDB) {
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
         body: updateEmployeeBody,
+        response: {
+          200: t.Any(),
+          404: errorResponseSchema,
+          409: errorResponseSchema,
+          422: t.Any(),
+        },
         detail: { summary: "Update employee", tags: ["employees"] },
       },
     )
@@ -141,6 +160,7 @@ export function employeesRouter(db: AnyDB) {
       },
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
+        response: { 204: t.Void(), 422: t.Any() },
         detail: { summary: "Soft-delete employee (idempotent)", tags: ["employees"] },
       },
     );

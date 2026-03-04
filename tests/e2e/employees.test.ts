@@ -300,6 +300,57 @@ test("PUT /v1/employees/:id non-existent returns 404", async () => {
   expect(res.status).toBe(404);
 });
 
+test("PUT /v1/employees/:id duplicate email returns 409", async () => {
+  const db = await createTestDb();
+  const companyId = await seedCompany(db);
+  const app = createTestApp(db);
+
+  const create1 = await app.handle(
+    new Request("http://localhost/v1/employees", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        employeeNumber: "001",
+        fullName: "First",
+        email: "a@test.com",
+        phoneNumber: "+15551111111",
+        companyId,
+      }),
+    }),
+  );
+  expect(create1.status).toBe(200);
+
+  const create2 = await app.handle(
+    new Request("http://localhost/v1/employees", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        employeeNumber: "002",
+        fullName: "Second",
+        email: "b@test.com",
+        phoneNumber: "+15552222222",
+        companyId,
+      }),
+    }),
+  );
+  expect(create2.status).toBe(200);
+
+  const first = (await create1.json()) as { id: string };
+  const res = await app.handle(
+    new Request(`http://localhost/v1/employees/${first.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: "b@test.com" }),
+    }),
+  );
+  expect(res.status).toBe(409);
+  const body = await res.json();
+  expect(body).toMatchObject({
+    error: "Conflict",
+    message: "Employee email already exists",
+  });
+});
+
 test("DELETE /v1/employees/:id returns 204", async () => {
   const db = await createTestDb();
   const companyId = await seedCompany(db);

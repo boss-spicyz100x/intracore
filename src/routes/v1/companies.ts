@@ -9,6 +9,7 @@ import {
   updateCompany,
   softDeleteCompany,
 } from "../../db/companies";
+import { errorResponseSchema } from "../../openapi/schemas";
 
 const SLUG_PATTERN = /^[A-Z0-9]+$/;
 
@@ -38,6 +39,7 @@ export function companiesRouter(db: AnyDB) {
       },
       {
         detail: { summary: "List companies", tags: ["companies"] },
+        response: { 200: t.Any(), 422: t.Any() },
       },
     )
     .post(
@@ -68,6 +70,12 @@ export function companiesRouter(db: AnyDB) {
       {
         body: createCompanyBody,
         detail: { summary: "Create company", tags: ["companies"] },
+        response: {
+          200: t.Any(),
+          400: errorResponseSchema,
+          409: errorResponseSchema,
+          422: t.Any(),
+        },
       },
     )
     .get(
@@ -85,6 +93,7 @@ export function companiesRouter(db: AnyDB) {
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
         detail: { summary: "Get company by ID", tags: ["companies"] },
+        response: { 200: t.Any(), 404: errorResponseSchema, 422: t.Any() },
       },
     )
     .put(
@@ -124,6 +133,12 @@ export function companiesRouter(db: AnyDB) {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
         body: updateCompanyBody,
         detail: { summary: "Update company", tags: ["companies"] },
+        response: {
+          200: t.Any(),
+          404: errorResponseSchema,
+          409: errorResponseSchema,
+          422: t.Any(),
+        },
       },
     )
     .delete(
@@ -135,6 +150,7 @@ export function companiesRouter(db: AnyDB) {
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
         detail: { summary: "Soft-delete company (idempotent)", tags: ["companies"] },
+        response: { 204: t.Void(), 422: t.Any() },
       },
     );
 }

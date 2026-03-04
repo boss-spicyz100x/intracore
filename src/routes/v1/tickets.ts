@@ -1,4 +1,5 @@
 import { Elysia, t, status as error } from "elysia";
+import { errorResponseSchema } from "../../openapi/schemas";
 import { v7 as uuidv7 } from "uuid";
 import type { AnyDB } from "../../db/tickets";
 import {
@@ -64,6 +65,7 @@ export function ticketsRouter(db: AnyDB) {
           summary: "List open tickets",
           tags: ["tickets"],
         },
+        response: { 200: t.Any() },
       },
     )
     .get(
@@ -98,6 +100,7 @@ export function ticketsRouter(db: AnyDB) {
           summary: "Get ticket history for employee",
           tags: ["tickets"],
         },
+        response: { 200: t.Any(), 400: errorResponseSchema, 422: t.Any() },
       },
     )
     .post(
@@ -148,6 +151,12 @@ export function ticketsRouter(db: AnyDB) {
           summary: "Create ticket",
           tags: ["tickets"],
         },
+        response: {
+          200: t.Any(),
+          400: errorResponseSchema,
+          404: errorResponseSchema,
+          422: t.Any(),
+        },
       },
     )
     .get(
@@ -170,6 +179,7 @@ export function ticketsRouter(db: AnyDB) {
           summary: "Get ticket by ticket number",
           tags: ["tickets"],
         },
+        response: { 200: t.Any(), 404: errorResponseSchema, 422: t.Any() },
       },
     )
     .put(
@@ -211,6 +221,12 @@ export function ticketsRouter(db: AnyDB) {
           summary: "Update ticket by ticket number",
           tags: ["tickets"],
         },
+        response: {
+          200: t.Any(),
+          400: errorResponseSchema,
+          404: errorResponseSchema,
+          422: t.Any(),
+        },
       },
     )
     .delete(
@@ -234,6 +250,7 @@ export function ticketsRouter(db: AnyDB) {
           summary: "Close ticket by ticket number (idempotent)",
           tags: ["tickets"],
         },
+        response: { 204: t.Void(), 404: errorResponseSchema, 422: t.Any() },
       },
     )
     .get(
@@ -254,6 +271,7 @@ export function ticketsRouter(db: AnyDB) {
           summary: "Get ticket by ID",
           tags: ["tickets"],
         },
+        response: { 200: t.Any(), 404: errorResponseSchema, 422: t.Any() },
       },
     )
     .put(
@@ -293,6 +311,12 @@ export function ticketsRouter(db: AnyDB) {
           summary: "Update ticket",
           tags: ["tickets"],
         },
+        response: {
+          200: t.Any(),
+          400: errorResponseSchema,
+          404: errorResponseSchema,
+          422: t.Any(),
+        },
       },
     )
     .delete(
@@ -307,6 +331,7 @@ export function ticketsRouter(db: AnyDB) {
           summary: "Close ticket (idempotent)",
           tags: ["tickets"],
         },
+        response: { 204: t.Void(), 404: errorResponseSchema, 422: t.Any() },
       },
     );
 }

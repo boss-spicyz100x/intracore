@@ -374,6 +374,117 @@ test("GET /v1/tickets/number/:ticketNumber invalid format returns 422", async ()
   expect(res.status).toBe(422);
 });
 
+test("GET /v1/tickets/history without employeeId returns 400", async () => {
+  const db = await createTestDb();
+  const app = createTestApp(db);
+  const res = await app.handle(new Request("http://localhost/v1/tickets/history"));
+  expect(res.status).toBe(400);
+  const body = await res.json();
+  expect(body).toEqual({ error: "Bad Request", message: "employeeId is required" });
+});
+
+test("GET /v1/tickets/history invalid status returns 400", async () => {
+  const db = await createTestDb();
+  const { reporterId } = await seedCompanyAndEmployees(db);
+  const app = createTestApp(db);
+  const res = await app.handle(
+    new Request(`http://localhost/v1/tickets/history?employeeId=${reporterId}&status=INVALID`),
+  );
+  expect(res.status).toBe(400);
+  const body = (await res.json()) as { message: string };
+  expect(body.message).toMatch(/NEW|PENDING|RESOLVED|CANCELLED|CLOSED/);
+});
+
+test("GET /v1/tickets/history invalid category returns 400", async () => {
+  const db = await createTestDb();
+  const { reporterId } = await seedCompanyAndEmployees(db);
+  const app = createTestApp(db);
+  const res = await app.handle(
+    new Request(`http://localhost/v1/tickets/history?employeeId=${reporterId}&category=INVALID`),
+  );
+  expect(res.status).toBe(400);
+  const body = (await res.json()) as { message: string };
+  expect(body.message).toMatch(/IT|FACILITIES|MISCELLANEOUS/);
+});
+
+test("GET /v1/tickets/history invalid priority returns 400", async () => {
+  const db = await createTestDb();
+  const { reporterId } = await seedCompanyAndEmployees(db);
+  const app = createTestApp(db);
+  const res = await app.handle(
+    new Request(`http://localhost/v1/tickets/history?employeeId=${reporterId}&priority=INVALID`),
+  );
+  expect(res.status).toBe(400);
+  const body = (await res.json()) as { message: string };
+  expect(body.message).toMatch(/LOW|MEDIUM|HIGH/);
+});
+
+test("POST /v1/tickets invalid category returns 400", async () => {
+  const db = await createTestDb();
+  const { companyId, reporterId } = await seedCompanyAndEmployees(db);
+  const app = createTestApp(db);
+  const res = await app.handle(
+    new Request("http://localhost/v1/tickets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: "Test",
+        companyId,
+        reportedById: reporterId,
+        category: "INVALID",
+      }),
+    }),
+  );
+  expect(res.status).toBe(400);
+});
+
+test("POST /v1/tickets invalid priority returns 400", async () => {
+  const db = await createTestDb();
+  const { companyId, reporterId } = await seedCompanyAndEmployees(db);
+  const app = createTestApp(db);
+  const res = await app.handle(
+    new Request("http://localhost/v1/tickets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: "Test",
+        companyId,
+        reportedById: reporterId,
+        priority: "INVALID",
+      }),
+    }),
+  );
+  expect(res.status).toBe(400);
+});
+
+test("PUT /v1/tickets/number/:ticketNumber invalid status returns 400", async () => {
+  const db = await createTestDb();
+  const { companyId, reporterId } = await seedCompanyAndEmployees(db);
+  const app = createTestApp(db);
+
+  const createRes = await app.handle(
+    new Request("http://localhost/v1/tickets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: "Update status",
+        companyId,
+        reportedById: reporterId,
+      }),
+    }),
+  );
+  const ticket = (await createRes.json()) as { ticketNumber: string };
+
+  const res = await app.handle(
+    new Request(`http://localhost/v1/tickets/number/${ticket.ticketNumber}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "INVALID" }),
+    }),
+  );
+  expect(res.status).toBe(400);
+});
+
 test("GET /v1/tickets/number/:ticketNumber accepts lowercase and returns ticket", async () => {
   const db = await createTestDb();
   const { companyId, reporterId } = await seedCompanyAndEmployees(db);
