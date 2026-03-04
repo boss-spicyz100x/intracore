@@ -217,6 +217,29 @@ export function ticketsRouter(db: AnyDB) {
         },
       },
     )
+    .delete(
+      "/number/:ticketNumber",
+      async ({ params }) => {
+        const existing = await getTicketByTicketNumber(db, params.ticketNumber);
+        if (!existing) {
+          throw error(404, {
+            error: "Not Found",
+            message: "Ticket not found",
+          });
+        }
+        await closeTicket(db, existing.id);
+        return new Response(null, { status: 204 });
+      },
+      {
+        params: t.Object({
+          ticketNumber: t.String({ pattern: "^[A-Z0-9]+-\\d+$" }),
+        }),
+        detail: {
+          summary: "Close ticket by ticket number (idempotent)",
+          tags: ["tickets"],
+        },
+      },
+    )
     .get(
       "/:id",
       async ({ params }) => {

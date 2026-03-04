@@ -439,6 +439,55 @@ test("PUT /v1/tickets/number/:ticketNumber non-existent assigneeId returns 404",
   expect(body).toMatchObject({ error: "Not Found", message: "Assignee employee not found" });
 });
 
+test("DELETE /v1/tickets/number/:ticketNumber closes ticket returns 204", async () => {
+  const db = await createTestDb();
+  const { companyId, reporterId } = await seedCompanyAndEmployees(db);
+  const app = createTestApp(db);
+
+  const createRes = await app.handle(
+    new Request("http://localhost/v1/tickets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: "To close by number",
+        companyId,
+        reportedById: reporterId,
+      }),
+    }),
+  );
+  const ticket = (await createRes.json()) as { ticketNumber: string };
+
+  const res = await app.handle(
+    new Request(`http://localhost/v1/tickets/number/${ticket.ticketNumber}`, {
+      method: "DELETE",
+    }),
+  );
+  expect(res.status).toBe(204);
+
+  const listRes = await app.handle(new Request("http://localhost/v1/tickets"));
+  expect(await listRes.json()).toHaveLength(0);
+});
+
+test("DELETE /v1/tickets/number/:ticketNumber non-existent returns 404", async () => {
+  const db = await createTestDb();
+  const app = createTestApp(db);
+  const res = await app.handle(
+    new Request("http://localhost/v1/tickets/number/ACME-99999", { method: "DELETE" }),
+  );
+  expect(res.status).toBe(404);
+  const body = await res.json();
+  expect(body).toMatchObject({ error: "Not Found", message: "Ticket not found" });
+});
+
+test("DELETE /v1/tickets/number/:ticketNumber invalid format returns 422", async () => {
+  const db = await createTestDb();
+  const app = createTestApp(db);
+  const res = await app.handle(
+    new Request("http://localhost/v1/tickets/number/not-valid-format", { method: "DELETE" }),
+  );
+  expect(res.status).toBe(422);
+});
+
 test("PUT /v1/tickets/:id non-existent ticket returns 404", async () => {
   const db = await createTestDb();
   const app = createTestApp(db);
