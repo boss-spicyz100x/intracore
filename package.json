@@ -11,6 +11,7 @@
     "generate:server": "drizzle-kit generate --config=drizzle.server.config.ts",
     "migrate:serverless": "wrangler d1 execute intracore --local --file=./migrations/0000_free_satana.sql",
     "migrate:server": "drizzle-kit migrate --config=drizzle.server.config.ts",
+    "seed:server": "bun src/db/seed.ts",
     "start:server": "bun server.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
