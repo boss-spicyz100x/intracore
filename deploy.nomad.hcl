@@ -27,6 +27,7 @@ job "intracore" {
 
       template {
         data = <<EOH
+NODE_ENV=production
 PORT=25050
 DATABASE_URL="postgres://{{ with nomadVar "secrets" }}{{ .database_user }}{{ end }}:{{ with nomadVar "secrets" }}{{ .database_password }}{{ end }}@{{ with nomadVar "secrets" }}{{ .database_host }}{{ end }}:{{ with nomadVar "secrets" }}{{ .database_port }}{{ end }}/intracore"
 EOH
