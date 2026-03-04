@@ -91,6 +91,21 @@ export async function getTicketById(db: AnyDB, id: string): Promise<TicketWithRe
   return toTicketWithRelations(row, employeeMap, companyMap);
 }
 
+export async function getTicketByTicketNumber(
+  db: AnyDB,
+  ticketNumber: string,
+): Promise<TicketWithRelations | null> {
+  const rows = await db
+    .select()
+    .from(tickets)
+    .where(eq(tickets.ticketNumber, ticketNumber))
+    .limit(1);
+  const row = rows[0];
+  if (!row) return null;
+  const { employeeMap, companyMap } = await fetchRelations(db, [row]);
+  return toTicketWithRelations(row, employeeMap, companyMap);
+}
+
 export type CreateTicketInput = {
   id: string;
   ticketNumber: string;

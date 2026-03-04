@@ -4,6 +4,7 @@ import type { AnyDB } from "../../db/tickets";
 import {
   listTickets,
   getTicketById,
+  getTicketByTicketNumber,
   createTicket,
   updateTicket,
   closeTicket,
@@ -149,6 +150,28 @@ export function ticketsRouter(db: AnyDB) {
         body: createTicketBody,
         detail: {
           summary: "Create ticket",
+          tags: ["tickets"],
+        },
+      },
+    )
+    .get(
+      "/number/:ticketNumber",
+      async ({ params }) => {
+        const ticket = await getTicketByTicketNumber(db, params.ticketNumber);
+        if (!ticket) {
+          throw error(404, {
+            error: "Not Found",
+            message: "Ticket not found",
+          });
+        }
+        return ticket;
+      },
+      {
+        params: t.Object({
+          ticketNumber: t.String({ pattern: "^[A-Z0-9]+-\\d+$" }),
+        }),
+        detail: {
+          summary: "Get ticket by ticket number",
           tags: ["tickets"],
         },
       },

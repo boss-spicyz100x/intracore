@@ -4,6 +4,7 @@ import { createTestDb } from "../helpers";
 import {
   listTickets,
   getTicketById,
+  getTicketByTicketNumber,
   createTicket,
   updateTicket,
   closeTicket,
@@ -103,6 +104,30 @@ test("getTicketById returns ticket when found", async () => {
 test("getTicketById returns null when not found", async () => {
   const db = await createTestDb();
   const result = await getTicketById(db, uuidv7());
+  expect(result).toBeNull();
+});
+
+test("getTicketByTicketNumber returns ticket when found", async () => {
+  const db = await createTestDb();
+  const { companyId, reporterId } = await seedCompanyAndEmployee(db);
+  await createTicket(db, {
+    id: uuidv7(),
+    ticketNumber: "ING-00001",
+    title: "Find by number",
+    companyId,
+    reportedById: reporterId,
+  });
+  const result = await getTicketByTicketNumber(db, "ING-00001");
+  expect(result).not.toBeNull();
+  expect(result!.ticketNumber).toBe("ING-00001");
+  expect(result!.title).toBe("Find by number");
+  expect(result!.reportedBy.fullName).toBe("Jane");
+  expect(result!.company.slug).toBe("ING");
+});
+
+test("getTicketByTicketNumber returns null when not found", async () => {
+  const db = await createTestDb();
+  const result = await getTicketByTicketNumber(db, "ING-99999");
   expect(result).toBeNull();
 });
 
