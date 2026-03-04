@@ -16,7 +16,7 @@ job "intracore" {
         image = "ghcr.io/boss-spicyz100x/intracore:latest"
         auth {
           username = "boss-spicyz100x"
-          password = "REPLACE_WITH_GHCR_PAT"
+          password = "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"
         }
         ports = ["http"]
       }
