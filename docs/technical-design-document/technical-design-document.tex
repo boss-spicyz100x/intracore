@@ -255,7 +255,7 @@ The following diagrams depict the flow (user connects via a public phone number 
     \newinst{api}{IntraCore API}
     \newinst{db}{Database}
     \begin{call}[1]{user}{List my tickets}{agent}{tickets}
-      \begin{call}[2]{agent}{GET /v1/tickets/history?employeeId=}{api}{tickets}
+      \begin{call}[2]{agent}{GET /v1/tickets/history?employeeId=\{employeeId\}}{api}{tickets}
         \begin{call}[1]{api}{Select tickets}{db}{tickets}
         \end{call}
       \end{call}
@@ -385,7 +385,7 @@ created_at TEXT NOT NULL
   \item \texttt{GET /v1/tickets/number/:ticketNumber} --- Get ticket by ticket number
   \item \texttt{PUT /v1/tickets/number/:ticketNumber} --- Update ticket by number
   \item \texttt{DELETE /v1/tickets/number/:ticketNumber} --- Close ticket by number
-  \item \texttt{GET /v1/tickets/history?employeeId=} --- Ticket history for employee
+  \item \texttt{GET /v1/tickets/history?employeeId=\{employeeId\}} --- Ticket history for employee
   \item \texttt{GET|POST /v1/companies}, \texttt{GET|PUT|DELETE /v1/companies/:id}
   \item \texttt{GET|POST /v1/employees}, \texttt{GET|PUT|DELETE /v1/employees/:id}
   \item \texttt{GET|POST /v1/whitelists}, \texttt{GET|PUT|DELETE /v1/whitelists/:id}
@@ -409,7 +409,7 @@ Open ticket & POST /v1/tickets \\
 Check status & GET /v1/tickets/number/:ticketNumber or GET /v1/tickets/:id \\
 Update ticket & PUT /v1/tickets/:id or PUT /v1/tickets/number/:ticketNumber \\
 Close ticket & DELETE /v1/tickets/:id or DELETE /v1/tickets/number/:ticketNumber \\
-Search history & GET /v1/tickets/history?employeeId= \\
+Search history & GET /v1/tickets/history?employeeId=\{employeeId\} \\
 \bottomrule
 \end{longtable}
 
