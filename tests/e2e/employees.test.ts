@@ -44,7 +44,7 @@ test("POST /v1/employees creates employee returns 200", async () => {
   expect(body.companyId).toBe(companyId);
 });
 
-test("POST /v1/employees missing required fields returns 422", async () => {
+test("POST /v1/employees missing required fields returns 400", async () => {
   const db = await createTestDb();
   const companyId = await seedCompany(db);
   const app = createTestApp(db);
@@ -60,7 +60,7 @@ test("POST /v1/employees missing required fields returns 422", async () => {
       }),
     }),
   );
-  expect(res.status).toBe(422);
+  expect(res.status).toBe(400);
 });
 
 test("POST /v1/employees non-existent companyId returns 404", async () => {
@@ -375,10 +375,13 @@ test("DELETE /v1/employees/:id returns 204", async () => {
       method: "DELETE",
     }),
   );
-  expect(res.status).toBe(204);
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as Record<string, unknown>;
+  expect(body.id).toBeDefined();
+  expect(body.email).toBeDefined();
 });
 
-test("DELETE /v1/employees/:id idempotent second DELETE returns 204", async () => {
+test("DELETE /v1/employees/:id second DELETE returns 404", async () => {
   const db = await createTestDb();
   const companyId = await seedCompany(db);
   const app = createTestApp(db);
@@ -402,14 +405,14 @@ test("DELETE /v1/employees/:id idempotent second DELETE returns 204", async () =
       method: "DELETE",
     }),
   );
-  expect(res1.status).toBe(204);
+  expect(res1.status).toBe(200);
 
   const res2 = await app.handle(
     new Request(`http://localhost/v1/employees/${employee.id}`, {
       method: "DELETE",
     }),
   );
-  expect(res2.status).toBe(204);
+  expect(res2.status).toBe(404);
 });
 
 test("DELETE /v1/employees/:id soft-deleted employee returns 404 on GET", async () => {

@@ -57,7 +57,7 @@ test("POST /v1/identity/verify non-matching identity returns 401", async () => {
   });
 });
 
-test("POST /v1/identity/verify missing required fields returns 422", async () => {
+test("POST /v1/identity/verify missing required fields returns 400", async () => {
   const db = await createTestDb();
   await seedCompanyAndEmployees(db);
   const app = createTestApp(db);
@@ -70,10 +70,10 @@ test("POST /v1/identity/verify missing required fields returns 422", async () =>
     }),
   );
 
-  expect(res.status).toBe(422);
+  expect(res.status).toBe(400);
 });
 
-test("POST /v1/identity/verify invalid email format returns 422", async () => {
+test("POST /v1/identity/verify invalid email format returns 400", async () => {
   const db = await createTestDb();
   await seedCompanyAndEmployees(db);
   const app = createTestApp(db);
@@ -90,5 +90,5 @@ test("POST /v1/identity/verify invalid email format returns 422", async () => {
     }),
   );
 
-  expect(res.status).toBe(422);
+  expect(res.status).toBe(400);
 });

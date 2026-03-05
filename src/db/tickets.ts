@@ -47,7 +47,7 @@ function toTicketEntity(
 ): TicketEntity | null {
   const reportedBy = employeeMap.get(row.reportedById);
   const company = companyMap.get(row.companyId);
-  if (reportedBy === undefined || company === undefined) return null;
+  if (reportedBy === undefined || company === undefined || !row.category) return null;
   return {
     id: row.id,
     ticketNumber: row.ticketNumber,
@@ -55,7 +55,7 @@ function toTicketEntity(
     description: row.description,
     status: row.status as TicketEntity["status"],
     priority: row.priority as TicketEntity["priority"],
-    category: row.category as TicketEntity["category"],
+    category: row.category,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     closedAt: row.closedAt,
@@ -102,7 +102,7 @@ export type CreateTicketInput = {
   reportedById: string;
   assigneeId?: string;
   priority?: "LOW" | "MEDIUM" | "HIGH";
-  category?: "IT" | "FACILITIES" | "MISCELLANEOUS";
+  category: "IT" | "FACILITIES" | "MISCELLANEOUS";
 };
 
 export async function createTicket(
@@ -119,7 +119,7 @@ export async function createTicket(
       description: input.description ?? null,
       status: "NEW",
       priority: input.priority ?? "MEDIUM",
-      category: input.category ?? null,
+      category: input.category,
       assigneeId: input.assigneeId ?? null,
       reportedById: input.reportedById,
       companyId: input.companyId,

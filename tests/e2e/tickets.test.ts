@@ -40,6 +40,7 @@ test("GET /v1/tickets returns only open tickets", async () => {
         title: "Open ticket",
         companyId,
         reportedById: reporterId,
+        category: "IT",
         assigneeId,
       }),
     }),
@@ -54,14 +55,14 @@ test("GET /v1/tickets returns only open tickets", async () => {
   const deleteRes = await app.handle(
     new Request(`http://localhost/v1/tickets/${ticket.id}`, { method: "DELETE" }),
   );
-  expect(deleteRes.status).toBe(204);
+  expect(deleteRes.status).toBe(200);
 
   const listRes2 = await app.handle(new Request("http://localhost/v1/tickets"));
   expect(listRes2.status).toBe(200);
   expect(await listRes2.json()).toHaveLength(0);
 });
 
-test("POST /v1/tickets missing required fields returns 422", async () => {
+test("POST /v1/tickets missing required fields returns 400", async () => {
   const db = await createTestDb();
   const app = createTestApp(db);
   const res = await app.handle(
@@ -71,10 +72,10 @@ test("POST /v1/tickets missing required fields returns 422", async () => {
       body: JSON.stringify({ title: "No company" }),
     }),
   );
-  expect(res.status).toBe(422);
+  expect(res.status).toBe(400);
 });
 
-test("POST /v1/tickets invalid UUID for companyId returns 422", async () => {
+test("POST /v1/tickets invalid UUID for companyId returns 400", async () => {
   const db = await createTestDb();
   const { reporterId } = await seedCompanyAndEmployees(db);
   const app = createTestApp(db);
@@ -86,10 +87,11 @@ test("POST /v1/tickets invalid UUID for companyId returns 422", async () => {
         title: "Test",
         companyId: "not-a-uuid",
         reportedById: reporterId,
+        category: "IT",
       }),
     }),
   );
-  expect(res.status).toBe(422);
+  expect(res.status).toBe(400);
 });
 
 test("POST /v1/tickets non-existent companyId returns 404", async () => {
@@ -104,6 +106,7 @@ test("POST /v1/tickets non-existent companyId returns 404", async () => {
         title: "Test",
         companyId: uuidv7(),
         reportedById: reporterId,
+        category: "IT",
       }),
     }),
   );
@@ -124,6 +127,7 @@ test("POST /v1/tickets non-existent reportedById returns 404", async () => {
         title: "Test",
         companyId,
         reportedById: uuidv7(),
+        category: "IT",
       }),
     }),
   );
@@ -135,7 +139,7 @@ test("POST /v1/tickets non-existent reportedById returns 404", async () => {
   });
 });
 
-test("POST /v1/tickets empty string assigneeId returns 422", async () => {
+test("POST /v1/tickets empty string assigneeId returns 400", async () => {
   const db = await createTestDb();
   const { companyId, reporterId } = await seedCompanyAndEmployees(db);
   const app = createTestApp(db);
@@ -151,7 +155,7 @@ test("POST /v1/tickets empty string assigneeId returns 422", async () => {
       }),
     }),
   );
-  expect(res.status).toBe(422);
+  expect(res.status).toBe(400);
 });
 
 test("POST /v1/tickets null assigneeId treated as no assignee returns 200", async () => {
@@ -166,6 +170,7 @@ test("POST /v1/tickets null assigneeId treated as no assignee returns 200", asyn
         title: "No Assignee",
         companyId,
         reportedById: reporterId,
+        category: "IT",
         assigneeId: null,
       }),
     }),
@@ -187,6 +192,7 @@ test("POST /v1/tickets non-existent assigneeId returns 404", async () => {
         title: "Test",
         companyId,
         reportedById: reporterId,
+        category: "IT",
         assigneeId: uuidv7(),
       }),
     }),
@@ -211,6 +217,7 @@ test("POST /v1/tickets valid minimal payload returns 200 with ticket", async () 
         title: "First ticket",
         companyId,
         reportedById: reporterId,
+        category: "IT",
       }),
     }),
   );
@@ -223,7 +230,7 @@ test("POST /v1/tickets valid minimal payload returns 200 with ticket", async () 
   expect(body.company).toMatchObject({ slug: "ACME" });
 });
 
-test("POST /v1/tickets accepts lowercase category and priority returns 200", async () => {
+test("POST /v1/tickets with uppercase category and priority returns 200", async () => {
   const db = await createTestDb();
   const { companyId, reporterId } = await seedCompanyAndEmployees(db);
   const app = createTestApp(db);
@@ -235,8 +242,8 @@ test("POST /v1/tickets accepts lowercase category and priority returns 200", asy
         title: "Facilities ticket",
         companyId,
         reportedById: reporterId,
-        category: "facilities",
-        priority: "high",
+        category: "FACILITIES",
+        priority: "HIGH",
       }),
     }),
   );
@@ -259,6 +266,7 @@ test("POST /v1/tickets sequential creates increment ticket numbers", async () =>
         title: "First",
         companyId,
         reportedById: reporterId,
+        category: "IT",
       }),
     }),
   );
@@ -273,6 +281,7 @@ test("POST /v1/tickets sequential creates increment ticket numbers", async () =>
         title: "Second",
         companyId,
         reportedById: reporterId,
+        category: "IT",
       }),
     }),
   );
@@ -293,6 +302,7 @@ test("GET /v1/tickets/:id valid ticket returns 200 with relations", async () => 
         title: "Get me",
         companyId,
         reportedById: reporterId,
+        category: "IT",
         assigneeId,
       }),
     }),
@@ -318,11 +328,11 @@ test("GET /v1/tickets/:id non-existent UUID returns 404", async () => {
   expect(body).toMatchObject({ error: "Not Found", message: "Ticket not found" });
 });
 
-test("GET /v1/tickets/:id invalid UUID format returns 422", async () => {
+test("GET /v1/tickets/:id invalid UUID format returns 400", async () => {
   const db = await createTestDb();
   const app = createTestApp(db);
   const res = await app.handle(new Request("http://localhost/v1/tickets/not-a-uuid"));
-  expect(res.status).toBe(422);
+  expect(res.status).toBe(400);
 });
 
 test("GET /v1/tickets/number/:ticketNumber returns ticket with relations", async () => {
@@ -338,6 +348,7 @@ test("GET /v1/tickets/number/:ticketNumber returns ticket with relations", async
         title: "Find by number",
         companyId,
         reportedById: reporterId,
+        category: "IT",
         assigneeId,
       }),
     }),
@@ -367,11 +378,11 @@ test("GET /v1/tickets/number/:ticketNumber non-existent returns 404", async () =
   expect(body).toMatchObject({ error: "Not Found", message: "Ticket not found" });
 });
 
-test("GET /v1/tickets/number/:ticketNumber invalid format returns 422", async () => {
+test("GET /v1/tickets/number/:ticketNumber invalid format returns 400", async () => {
   const db = await createTestDb();
   const app = createTestApp(db);
   const res = await app.handle(new Request("http://localhost/v1/tickets/number/not-valid-format"));
-  expect(res.status).toBe(422);
+  expect(res.status).toBe(400);
 });
 
 test("GET /v1/tickets/history without employeeId returns 400", async () => {
@@ -391,8 +402,6 @@ test("GET /v1/tickets/history invalid status returns 400", async () => {
     new Request(`http://localhost/v1/tickets/history?employeeId=${reporterId}&status=INVALID`),
   );
   expect(res.status).toBe(400);
-  const body = (await res.json()) as { message: string };
-  expect(body.message).toMatch(/NEW|PENDING|RESOLVED|CANCELLED|CLOSED/);
 });
 
 test("GET /v1/tickets/history invalid category returns 400", async () => {
@@ -403,8 +412,6 @@ test("GET /v1/tickets/history invalid category returns 400", async () => {
     new Request(`http://localhost/v1/tickets/history?employeeId=${reporterId}&category=INVALID`),
   );
   expect(res.status).toBe(400);
-  const body = (await res.json()) as { message: string };
-  expect(body.message).toMatch(/IT|FACILITIES|MISCELLANEOUS/);
 });
 
 test("GET /v1/tickets/history invalid priority returns 400", async () => {
@@ -415,8 +422,6 @@ test("GET /v1/tickets/history invalid priority returns 400", async () => {
     new Request(`http://localhost/v1/tickets/history?employeeId=${reporterId}&priority=INVALID`),
   );
   expect(res.status).toBe(400);
-  const body = (await res.json()) as { message: string };
-  expect(body.message).toMatch(/LOW|MEDIUM|HIGH/);
 });
 
 test("POST /v1/tickets invalid category returns 400", async () => {
@@ -470,6 +475,7 @@ test("PUT /v1/tickets/number/:ticketNumber invalid status returns 400", async ()
         title: "Update status",
         companyId,
         reportedById: reporterId,
+        category: "IT",
       }),
     }),
   );
@@ -498,6 +504,7 @@ test("GET /v1/tickets/number/:ticketNumber accepts lowercase and returns ticket"
         title: "Lowercase lookup",
         companyId,
         reportedById: reporterId,
+        category: "IT",
       }),
     }),
   );
@@ -554,6 +561,7 @@ test("PUT /v1/tickets/number/:ticketNumber valid update returns 200 with updated
         priority: "LOW",
         companyId,
         reportedById: reporterId,
+        category: "IT",
       }),
     }),
   );
@@ -574,7 +582,7 @@ test("PUT /v1/tickets/number/:ticketNumber valid update returns 200 with updated
   expect(body.status).toBe("PENDING");
 });
 
-test("PUT /v1/tickets/number/:ticketNumber accepts lowercase status and category", async () => {
+test("PUT /v1/tickets/number/:ticketNumber with uppercase status and category returns 200", async () => {
   const db = await createTestDb();
   const { companyId, reporterId } = await seedCompanyAndEmployees(db);
   const app = createTestApp(db);
@@ -583,7 +591,12 @@ test("PUT /v1/tickets/number/:ticketNumber accepts lowercase status and category
     new Request("http://localhost/v1/tickets", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "Update me", companyId, reportedById: reporterId }),
+      body: JSON.stringify({
+        title: "Update me",
+        companyId,
+        reportedById: reporterId,
+        category: "IT",
+      }),
     }),
   );
   const ticket = (await createRes.json()) as { ticketNumber: string };
@@ -593,9 +606,9 @@ test("PUT /v1/tickets/number/:ticketNumber accepts lowercase status and category
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        status: "pending",
-        category: "facilities",
-        priority: "high",
+        status: "PENDING",
+        category: "FACILITIES",
+        priority: "HIGH",
       }),
     }),
   );
@@ -621,7 +634,7 @@ test("PUT /v1/tickets/number/:ticketNumber non-existent returns 404", async () =
   expect(body).toMatchObject({ error: "Not Found", message: "Ticket not found" });
 });
 
-test("PUT /v1/tickets/number/:ticketNumber invalid format returns 422", async () => {
+test("PUT /v1/tickets/number/:ticketNumber invalid format returns 400", async () => {
   const db = await createTestDb();
   const app = createTestApp(db);
   const res = await app.handle(
@@ -631,7 +644,7 @@ test("PUT /v1/tickets/number/:ticketNumber invalid format returns 422", async ()
       body: JSON.stringify({ title: "Nope" }),
     }),
   );
-  expect(res.status).toBe(422);
+  expect(res.status).toBe(400);
 });
 
 test("PUT /v1/tickets/number/:ticketNumber non-existent assigneeId returns 404", async () => {
@@ -643,7 +656,7 @@ test("PUT /v1/tickets/number/:ticketNumber non-existent assigneeId returns 404",
     new Request("http://localhost/v1/tickets", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "Test", companyId, reportedById: reporterId }),
+      body: JSON.stringify({ title: "Test", companyId, reportedById: reporterId, category: "IT" }),
     }),
   );
   const ticket = (await createRes.json()) as { ticketNumber: string };
@@ -673,6 +686,7 @@ test("DELETE /v1/tickets/number/:ticketNumber closes ticket returns 204", async 
         title: "To close by number",
         companyId,
         reportedById: reporterId,
+        category: "IT",
       }),
     }),
   );
@@ -683,7 +697,10 @@ test("DELETE /v1/tickets/number/:ticketNumber closes ticket returns 204", async 
       method: "DELETE",
     }),
   );
-  expect(res.status).toBe(204);
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as Record<string, unknown>;
+  expect(body.ticketNumber).toBeDefined();
+  expect(body.closedAt).not.toBeNull();
 
   const listRes = await app.handle(new Request("http://localhost/v1/tickets"));
   expect(await listRes.json()).toHaveLength(0);
@@ -700,13 +717,13 @@ test("DELETE /v1/tickets/number/:ticketNumber non-existent returns 404", async (
   expect(body).toMatchObject({ error: "Not Found", message: "Ticket not found" });
 });
 
-test("DELETE /v1/tickets/number/:ticketNumber invalid format returns 422", async () => {
+test("DELETE /v1/tickets/number/:ticketNumber invalid format returns 400", async () => {
   const db = await createTestDb();
   const app = createTestApp(db);
   const res = await app.handle(
     new Request("http://localhost/v1/tickets/number/not-valid-format", { method: "DELETE" }),
   );
-  expect(res.status).toBe(422);
+  expect(res.status).toBe(400);
 });
 
 test("PUT /v1/tickets/:id non-existent ticket returns 404", async () => {
@@ -737,6 +754,7 @@ test("PUT /v1/tickets/:id valid update returns 200 with updated values", async (
         priority: "LOW",
         companyId,
         reportedById: reporterId,
+        category: "IT",
       }),
     }),
   );
@@ -755,7 +773,7 @@ test("PUT /v1/tickets/:id valid update returns 200 with updated values", async (
   expect(body.priority).toBe("HIGH");
 });
 
-test("DELETE /v1/tickets/:id closes ticket returns 204", async () => {
+test("DELETE /v1/tickets/:id closes ticket returns 200 with closed ticket", async () => {
   const db = await createTestDb();
   const { companyId, reporterId } = await seedCompanyAndEmployees(db);
   const app = createTestApp(db);
@@ -768,6 +786,7 @@ test("DELETE /v1/tickets/:id closes ticket returns 204", async () => {
         title: "To close",
         companyId,
         reportedById: reporterId,
+        category: "IT",
       }),
     }),
   );
@@ -778,10 +797,13 @@ test("DELETE /v1/tickets/:id closes ticket returns 204", async () => {
       method: "DELETE",
     }),
   );
-  expect(res.status).toBe(204);
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as Record<string, unknown>;
+  expect(body.id).toBe(ticket.id);
+  expect(body.closedAt).not.toBeNull();
 });
 
-test("DELETE /v1/tickets/:id idempotent second DELETE returns 204", async () => {
+test("DELETE /v1/tickets/:id second DELETE returns 200 (ticket still findable after close)", async () => {
   const db = await createTestDb();
   const { companyId, reporterId } = await seedCompanyAndEmployees(db);
   const app = createTestApp(db);
@@ -794,6 +816,7 @@ test("DELETE /v1/tickets/:id idempotent second DELETE returns 204", async () => 
         title: "To close twice",
         companyId,
         reportedById: reporterId,
+        category: "IT",
       }),
     }),
   );
@@ -804,14 +827,14 @@ test("DELETE /v1/tickets/:id idempotent second DELETE returns 204", async () => 
       method: "DELETE",
     }),
   );
-  expect(res1.status).toBe(204);
+  expect(res1.status).toBe(200);
 
   const res2 = await app.handle(
     new Request(`http://localhost/v1/tickets/${ticket.id}`, {
       method: "DELETE",
     }),
   );
-  expect(res2.status).toBe(204);
+  expect(res2.status).toBe(200);
 });
 
 test("DELETE /v1/tickets/:id closed ticket absent from GET /v1/tickets", async () => {
@@ -827,6 +850,7 @@ test("DELETE /v1/tickets/:id closed ticket absent from GET /v1/tickets", async (
         title: "Will be closed",
         companyId,
         reportedById: reporterId,
+        category: "IT",
       }),
     }),
   );
@@ -897,6 +921,7 @@ test("getTicketById returns ticket with relations (DB)", async () => {
     title: "Get me",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   const ticket = await getTicketById(db, ticketId);
   expect(ticket).not.toBeNull();
@@ -922,10 +947,12 @@ test("updateTicket updates description and priority (DB)", async () => {
     companyId,
     reportedById: reporterId,
     priority: "MEDIUM",
+    category: "IT",
   });
   const updated = await updateTicket(db, ticketId, {
     description: "New desc",
     priority: "HIGH",
+    category: "IT",
   });
   expect(updated).not.toBeNull();
   expect(updated!.description).toBe("New desc");
@@ -946,6 +973,7 @@ test("closeTicket sets closedAt and excludes from listTickets (DB)", async () =>
     title: "To close",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   expect(await listTickets(db)).toHaveLength(1);
   const closed = await closeTicket(db, ticketId);
@@ -973,6 +1001,7 @@ test("countTicketsByCompany and getCompanyById (DB)", async () => {
     title: "First",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   expect(await countTicketsByCompany(db, companyId)).toBe(1);
   await createTicket(db, {
@@ -981,6 +1010,7 @@ test("countTicketsByCompany and getCompanyById (DB)", async () => {
     title: "Second",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   expect(await countTicketsByCompany(db, companyId)).toBe(2);
 });

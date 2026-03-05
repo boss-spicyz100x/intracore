@@ -35,7 +35,7 @@ test("POST /v1/companies creates company returns 200", async () => {
   expect(body.updatedAt).toBeDefined();
 });
 
-test("POST /v1/companies missing required fields returns 422", async () => {
+test("POST /v1/companies missing required fields returns 400", async () => {
   const db = await createTestDb();
   const app = createTestApp(db);
   const res = await app.handle(
@@ -45,7 +45,7 @@ test("POST /v1/companies missing required fields returns 422", async () => {
       body: JSON.stringify({ name: "No slug" }),
     }),
   );
-  expect(res.status).toBe(422);
+  expect(res.status).toBe(400);
 });
 
 test("POST /v1/companies invalid slug (hyphen) returns 400", async () => {
@@ -140,11 +140,11 @@ test("GET /v1/companies/:id non-existent returns 404", async () => {
   });
 });
 
-test("GET /v1/companies/:id invalid UUID returns 422", async () => {
+test("GET /v1/companies/:id invalid UUID returns 400", async () => {
   const db = await createTestDb();
   const app = createTestApp(db);
   const res = await app.handle(new Request("http://localhost/v1/companies/not-a-uuid"));
-  expect(res.status).toBe(422);
+  expect(res.status).toBe(400);
 });
 
 test("PUT /v1/companies/:id updates company", async () => {
@@ -295,10 +295,13 @@ test("DELETE /v1/companies/:id returns 204", async () => {
       method: "DELETE",
     }),
   );
-  expect(res.status).toBe(204);
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as Record<string, unknown>;
+  expect(body.id).toBeDefined();
+  expect(body.slug).toBeDefined();
 });
 
-test("DELETE /v1/companies/:id idempotent second DELETE returns 204", async () => {
+test("DELETE /v1/companies/:id second DELETE returns 404", async () => {
   const db = await createTestDb();
   const app = createTestApp(db);
   const createRes = await app.handle(
@@ -315,14 +318,14 @@ test("DELETE /v1/companies/:id idempotent second DELETE returns 204", async () =
       method: "DELETE",
     }),
   );
-  expect(res1.status).toBe(204);
+  expect(res1.status).toBe(200);
 
   const res2 = await app.handle(
     new Request(`http://localhost/v1/companies/${company.id}`, {
       method: "DELETE",
     }),
   );
-  expect(res2.status).toBe(204);
+  expect(res2.status).toBe(404);
 });
 
 test("DELETE /v1/companies/:id soft-deleted company returns 404 on GET", async () => {

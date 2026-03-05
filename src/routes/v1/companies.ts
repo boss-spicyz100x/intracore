@@ -32,6 +32,13 @@ const updateCompanyBody = t.Object({
 
 export function companiesRouter(db: AnyDB) {
   return new Elysia({ prefix: "/v1/companies" })
+    .onError(({ code, error: handlerError }) => {
+      if (code === "VALIDATION")
+        return new Response((handlerError as Error).message, {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+    })
     .get(
       "/",
       async () => {
@@ -40,7 +47,7 @@ export function companiesRouter(db: AnyDB) {
       },
       {
         detail: { summary: "List companies", tags: ["companies"] },
-        response: { 200: t.Array(companyDTOSchema), 422: validationErrorSchema },
+        response: { 200: t.Array(companyDTOSchema), 400: validationErrorSchema },
       },
     )
     .post(
@@ -75,7 +82,6 @@ export function companiesRouter(db: AnyDB) {
           200: companyDTOSchema,
           400: errorResponseSchema,
           409: errorResponseSchema,
-          422: validationErrorSchema,
         },
       },
     )
@@ -94,7 +100,7 @@ export function companiesRouter(db: AnyDB) {
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
         detail: { summary: "Get company by ID", tags: ["companies"] },
-        response: { 200: companyDTOSchema, 404: errorResponseSchema, 422: validationErrorSchema },
+        response: { 200: companyDTOSchema, 400: validationErrorSchema, 404: errorResponseSchema },
       },
     )
     .put(
@@ -139,20 +145,23 @@ export function companiesRouter(db: AnyDB) {
           400: errorResponseSchema,
           404: errorResponseSchema,
           409: errorResponseSchema,
-          422: validationErrorSchema,
         },
       },
     )
     .delete(
       "/:id",
       async ({ params }) => {
+        const existing = await getCompanyById(db, params.id);
+        if (!existing) {
+          throw error(404, { error: "Not Found", message: "Company not found" });
+        }
         await softDeleteCompany(db, params.id);
-        return new Response(null, { status: 204 });
+        return toCompanyDTO(existing);
       },
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
-        detail: { summary: "Soft-delete company (idempotent)", tags: ["companies"] },
-        response: { 204: t.Void(), 422: validationErrorSchema },
+        detail: { summary: "Soft-delete company", tags: ["companies"] },
+        response: { 200: companyDTOSchema, 400: validationErrorSchema, 404: errorResponseSchema },
       },
     );
 }

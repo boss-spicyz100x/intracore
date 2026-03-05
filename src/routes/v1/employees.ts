@@ -35,6 +35,13 @@ const updateEmployeeBody = t.Object({
 
 export function employeesRouter(db: AnyDB) {
   return new Elysia({ prefix: "/v1/employees" })
+    .onError(({ code, error: handlerError }) => {
+      if (code === "VALIDATION")
+        return new Response((handlerError as Error).message, {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+    })
     .get(
       "/",
       async ({ query }) => {
@@ -45,7 +52,7 @@ export function employeesRouter(db: AnyDB) {
         query: t.Object({
           companyId: t.Optional(t.String({ format: "uuid" })),
         }),
-        response: { 200: t.Array(employeeDTOSchema), 422: validationErrorSchema },
+        response: { 200: t.Array(employeeDTOSchema), 400: validationErrorSchema },
         detail: { summary: "List employees", tags: ["employees"] },
       },
     )
@@ -85,7 +92,6 @@ export function employeesRouter(db: AnyDB) {
           200: employeeDTOSchema,
           404: errorResponseSchema,
           409: errorResponseSchema,
-          422: validationErrorSchema,
         },
         detail: { summary: "Create employee", tags: ["employees"] },
       },
@@ -106,8 +112,8 @@ export function employeesRouter(db: AnyDB) {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
         response: {
           200: employeeDTOSchema,
+          400: validationErrorSchema,
           404: errorResponseSchema,
-          422: validationErrorSchema,
         },
         detail: { summary: "Get employee by ID", tags: ["employees"] },
       },
@@ -148,7 +154,6 @@ export function employeesRouter(db: AnyDB) {
           200: employeeDTOSchema,
           404: errorResponseSchema,
           409: errorResponseSchema,
-          422: validationErrorSchema,
         },
         detail: { summary: "Update employee", tags: ["employees"] },
       },
@@ -156,13 +161,17 @@ export function employeesRouter(db: AnyDB) {
     .delete(
       "/:id",
       async ({ params }) => {
+        const existing = await getEmployeeById(db, params.id);
+        if (!existing) {
+          throw error(404, { error: "Not Found", message: "Employee not found" });
+        }
         await softDeleteEmployee(db, params.id);
-        return new Response(null, { status: 204 });
+        return toEmployeeDTO(existing);
       },
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
-        response: { 204: t.Void(), 422: validationErrorSchema },
-        detail: { summary: "Soft-delete employee (idempotent)", tags: ["employees"] },
+        response: { 200: employeeDTOSchema, 400: validationErrorSchema, 404: errorResponseSchema },
+        detail: { summary: "Soft-delete employee", tags: ["employees"] },
       },
     );
 }

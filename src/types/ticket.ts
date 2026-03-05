@@ -11,7 +11,7 @@ export type TicketEntity = {
   description: string | null;
   status: TicketStatus;
   priority: TicketPriority;
-  category: TicketCategory | null;
+  category: TicketCategory;
   createdAt: string;
   updatedAt: string;
   closedAt: string | null;
@@ -45,9 +45,7 @@ export const ticketDTOSchema = t.Object({
     t.Literal("CLOSED"),
   ]),
   priority: t.Union([t.Literal("LOW"), t.Literal("MEDIUM"), t.Literal("HIGH")]),
-  category: t.Nullable(
-    t.Union([t.Literal("IT"), t.Literal("FACILITIES"), t.Literal("MISCELLANEOUS")]),
-  ),
+  category: t.Union([t.Literal("IT"), t.Literal("FACILITIES"), t.Literal("MISCELLANEOUS")]),
   createdAt: t.String({ format: "date-time" }),
   updatedAt: t.String({ format: "date-time" }),
   closedAt: t.Nullable(t.String({ format: "date-time" })),

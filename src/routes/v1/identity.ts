@@ -15,50 +15,58 @@ const verifyBody = t.Object({
 });
 
 export function identityRouter(db: AnyDB) {
-  return new Elysia({ prefix: "/v1/identity" }).post(
-    "/verify",
-    async ({ body, set }) => {
-      const [r] = await db
-        .select({
-          id: employees.id,
-          fullName: employees.fullName,
-          email: employees.email,
-          preferredLanguage: employees.preferredLanguage,
-        })
-        .from(employees)
-        .where(
-          and(
-            eq(employees.phoneNumber, body.phoneNumber),
-            eq(employees.email, body.email),
-            eq(employees.employeeNumber, body.employeeNumber),
-            isNull(employees.deletedAt),
-          ),
-        )
-        .limit(1);
+  return new Elysia({ prefix: "/v1/identity" })
+    .onError(({ code, error: handlerError }) => {
+      if (code === "VALIDATION")
+        return new Response((handlerError as Error).message, {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+    })
+    .post(
+      "/verify",
+      async ({ body, set }) => {
+        const [r] = await db
+          .select({
+            id: employees.id,
+            fullName: employees.fullName,
+            email: employees.email,
+            preferredLanguage: employees.preferredLanguage,
+          })
+          .from(employees)
+          .where(
+            and(
+              eq(employees.phoneNumber, body.phoneNumber),
+              eq(employees.email, body.email),
+              eq(employees.employeeNumber, body.employeeNumber),
+              isNull(employees.deletedAt),
+            ),
+          )
+          .limit(1);
 
-      if (!r) {
-        set.status = 401;
+        if (!r) {
+          set.status = 401;
+          return {
+            error: "Unauthorized",
+            message: "Identity verification failed",
+          };
+        }
+
         return {
-          error: "Unauthorized",
-          message: "Identity verification failed",
+          id: r.id,
+          fullName: r.fullName,
+          email: r.email,
+          preferredLanguage: r.preferredLanguage,
         };
-      }
-
-      return {
-        id: r.id,
-        fullName: r.fullName,
-        email: r.email,
-        preferredLanguage: r.preferredLanguage,
-      };
-    },
-    {
-      body: verifyBody,
-      detail: { summary: "Verify employee identity", tags: ["identity"] },
-      response: {
-        200: identityResponseSchema,
-        401: errorResponseSchema,
-        422: validationErrorSchema,
       },
-    },
-  );
+      {
+        body: verifyBody,
+        detail: { summary: "Verify employee identity", tags: ["identity"] },
+        response: {
+          200: identityResponseSchema,
+          400: validationErrorSchema,
+          401: errorResponseSchema,
+        },
+      },
+    );
 }

@@ -61,6 +61,7 @@ test("listTickets returns only open tickets", async () => {
     title: "Open",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   await closeTicket(db, ticketId);
   const list = await listTickets(db);
@@ -76,6 +77,7 @@ test("listTickets returns tickets with relations", async () => {
     title: "Test",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   const result = await listTickets(db);
   expect(result).toHaveLength(1);
@@ -94,6 +96,7 @@ test("getTicketById returns ticket when found", async () => {
     title: "Get me",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   const result = await getTicketById(db, ticketId);
   expect(result).not.toBeNull();
@@ -116,6 +119,7 @@ test("getTicketByTicketNumber returns ticket when found", async () => {
     title: "Find by number",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   const result = await getTicketByTicketNumber(db, "ING-00001");
   expect(result).not.toBeNull();
@@ -184,6 +188,7 @@ test("getTicketByTicketNumber returns ticket when given lowercase ticket number"
     title: "Lowercase",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   const result = await getTicketByTicketNumber(db, "bds-00001");
   expect(result).not.toBeNull();
@@ -223,12 +228,14 @@ test("updateTicket updates and returns ticket", async () => {
     title: "Original",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   const result = await updateTicket(db, ticketId, {
     title: "Updated",
     description: "New desc",
     status: "PENDING",
     priority: "HIGH",
+    category: "IT",
   });
   expect(result).not.toBeNull();
   expect(result!.title).toBe("Updated");
@@ -247,6 +254,7 @@ test("updateTicket partial update", async () => {
     title: "Original",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   const result = await updateTicket(db, ticketId, { assigneeId: null });
   expect(result).not.toBeNull();
@@ -269,6 +277,7 @@ test("closeTicket sets closedAt", async () => {
     title: "To close",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   const result = await closeTicket(db, ticketId);
   expect(result).toBe(true);
@@ -288,6 +297,7 @@ test("countTicketsByCompany returns count", async () => {
     title: "First",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   expect(await countTicketsByCompany(db, companyId)).toBe(1);
   await createTicket(db, {
@@ -296,6 +306,7 @@ test("countTicketsByCompany returns count", async () => {
     title: "Second",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   expect(await countTicketsByCompany(db, companyId)).toBe(2);
 });
@@ -376,6 +387,7 @@ test("getTicketHistory returns tickets by employeeId", async () => {
     title: "T1",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   await createTicket(db, {
     id: uuidv7(),
@@ -383,6 +395,7 @@ test("getTicketHistory returns tickets by employeeId", async () => {
     title: "T2",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   const result = await getTicketHistory(db, { employeeId: reporterId });
   expect(result).toHaveLength(2);
@@ -399,6 +412,7 @@ test("getTicketHistory filters by status", async () => {
     title: "New",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   await createTicket(db, {
     id: t2,
@@ -406,6 +420,7 @@ test("getTicketHistory filters by status", async () => {
     title: "Pending",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   await updateTicket(db, t2, { status: "PENDING" });
   const result = await getTicketHistory(db, {
@@ -453,6 +468,7 @@ test("getTicketHistory filters by priority", async () => {
     companyId,
     reportedById: reporterId,
     priority: "HIGH",
+    category: "IT",
   });
   await createTicket(db, {
     id: uuidv7(),
@@ -461,10 +477,12 @@ test("getTicketHistory filters by priority", async () => {
     companyId,
     reportedById: reporterId,
     priority: "LOW",
+    category: "IT",
   });
   const result = await getTicketHistory(db, {
     employeeId: reporterId,
     priority: "HIGH",
+    category: "IT",
   });
   expect(result).toHaveLength(1);
   expect(result[0]!.priority).toBe("HIGH");
@@ -481,6 +499,7 @@ test("getTicketHistory filters by dateFrom and dateTo", async () => {
     title: "Early",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   const early = await getTicketById(db, t1);
   const dateFrom = early!.createdAt;
@@ -490,6 +509,7 @@ test("getTicketHistory filters by dateFrom and dateTo", async () => {
     title: "Late",
     companyId,
     reportedById: reporterId,
+    category: "IT",
   });
   const late = await getTicketById(db, t2);
   const dateTo = late!.createdAt;

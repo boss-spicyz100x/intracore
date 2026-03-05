@@ -16,45 +16,50 @@ import {
 } from "../../db/tickets";
 import { toTicketDTO, ticketDTOSchema } from "../../types/ticket";
 
-const CATEGORIES = ["IT", "FACILITIES", "MISCELLANEOUS"] as const;
-const PRIORITIES = ["LOW", "MEDIUM", "HIGH"] as const;
-const STATUSES = ["NEW", "PENDING", "RESOLVED", "CANCELLED", "CLOSED"] as const;
+const statusSchema = t.Union([
+  t.Literal("NEW"),
+  t.Literal("PENDING"),
+  t.Literal("RESOLVED"),
+  t.Literal("CANCELLED"),
+  t.Literal("CLOSED"),
+]);
 
-function normalizeEnum<T extends string>(
-  value: string | undefined,
-  allowed: readonly T[],
-  name: string,
-): T | undefined {
-  if (value === undefined || value === null) return undefined;
-  const norm = value.toUpperCase();
-  if (allowed.includes(norm as T)) return norm as T;
-  throw error(400, {
-    error: "Bad Request",
-    message: `Invalid ${name}: must be one of ${allowed.join(", ")}`,
-  });
-}
+const prioritySchema = t.Union([t.Literal("LOW"), t.Literal("MEDIUM"), t.Literal("HIGH")]);
+
+const categorySchema = t.Union([
+  t.Literal("IT"),
+  t.Literal("FACILITIES"),
+  t.Literal("MISCELLANEOUS"),
+]);
 
 const createTicketBody = t.Object({
   title: t.String({ minLength: 1 }),
   companyId: t.String({ format: "uuid" }),
   reportedById: t.String({ format: "uuid" }),
+  category: categorySchema,
   description: t.Optional(t.String()),
-  priority: t.Optional(t.String()),
-  category: t.Optional(t.String()),
+  priority: t.Optional(prioritySchema),
   assigneeId: t.Optional(t.Union([t.String({ format: "uuid" }), t.Null()])),
 });
 
 const updateTicketBody = t.Object({
   title: t.Optional(t.String({ minLength: 1 })),
   description: t.Optional(t.String()),
-  status: t.Optional(t.String()),
-  priority: t.Optional(t.String()),
-  category: t.Optional(t.String()),
+  status: t.Optional(statusSchema),
+  priority: t.Optional(prioritySchema),
+  category: t.Optional(categorySchema),
   assigneeId: t.Optional(t.Union([t.String({ format: "uuid" }), t.Null()])),
 });
 
 export function ticketsRouter(db: AnyDB) {
   return new Elysia({ prefix: "/v1/tickets" })
+    .onError(({ code, error: handlerError }) => {
+      if (code === "VALIDATION")
+        return new Response((handlerError as Error).message, {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+    })
     .get(
       "/",
       async () => {
@@ -66,7 +71,7 @@ export function ticketsRouter(db: AnyDB) {
           summary: "List open tickets",
           tags: ["tickets"],
         },
-        response: { 200: t.Array(ticketDTOSchema), 422: validationErrorSchema },
+        response: { 200: t.Array(ticketDTOSchema), 400: validationErrorSchema },
       },
     )
     .get(
@@ -80,9 +85,9 @@ export function ticketsRouter(db: AnyDB) {
         }
         const tickets = await getTicketHistory(db, {
           employeeId: query.employeeId,
-          status: normalizeEnum(query.status, STATUSES, "status"),
-          category: normalizeEnum(query.category, CATEGORIES, "category"),
-          priority: normalizeEnum(query.priority, PRIORITIES, "priority"),
+          status: query.status,
+          category: query.category,
+          priority: query.priority,
           dateFrom: query.dateFrom,
           dateTo: query.dateTo,
         });
@@ -91,11 +96,15 @@ export function ticketsRouter(db: AnyDB) {
       {
         query: t.Object({
           employeeId: t.Optional(t.String({ format: "uuid" })),
-          status: t.Optional(t.String()),
-          category: t.Optional(t.String()),
-          priority: t.Optional(t.String()),
-          dateFrom: t.Optional(t.String()),
-          dateTo: t.Optional(t.String()),
+          status: t.Optional(statusSchema),
+          category: t.Optional(categorySchema),
+          priority: t.Optional(prioritySchema),
+          dateFrom: t.Optional(
+            t.String({ description: "ISO date string, e.g. 2026-01-01T00:00:00.000Z" }),
+          ),
+          dateTo: t.Optional(
+            t.String({ description: "ISO date string, e.g. 2026-12-31T23:59:59.999Z" }),
+          ),
         }),
         detail: {
           summary: "Get ticket history for employee",
@@ -104,7 +113,6 @@ export function ticketsRouter(db: AnyDB) {
         response: {
           200: t.Array(ticketDTOSchema),
           400: errorResponseSchema,
-          422: validationErrorSchema,
         },
       },
     )
@@ -144,8 +152,8 @@ export function ticketsRouter(db: AnyDB) {
           companyId: body.companyId,
           reportedById: body.reportedById,
           assigneeId,
-          priority: normalizeEnum(body.priority, PRIORITIES, "priority"),
-          category: normalizeEnum(body.category, CATEGORIES, "category"),
+          priority: body.priority,
+          category: body.category,
         });
         const full = await getTicketById(db, ticket.id);
         return toTicketDTO(full!);
@@ -160,7 +168,6 @@ export function ticketsRouter(db: AnyDB) {
           200: ticketDTOSchema,
           400: errorResponseSchema,
           404: errorResponseSchema,
-          422: validationErrorSchema,
         },
       },
     )
@@ -184,7 +191,7 @@ export function ticketsRouter(db: AnyDB) {
           summary: "Get ticket by ticket number",
           tags: ["tickets"],
         },
-        response: { 200: ticketDTOSchema, 404: errorResponseSchema, 422: validationErrorSchema },
+        response: { 200: ticketDTOSchema, 400: validationErrorSchema, 404: errorResponseSchema },
       },
     )
     .put(
@@ -209,9 +216,9 @@ export function ticketsRouter(db: AnyDB) {
         const updated = await updateTicket(db, existing.id, {
           title: body.title,
           description: body.description,
-          status: normalizeEnum(body.status, STATUSES, "status"),
-          priority: normalizeEnum(body.priority, PRIORITIES, "priority"),
-          category: normalizeEnum(body.category, CATEGORIES, "category"),
+          status: body.status,
+          priority: body.priority,
+          category: body.category,
           assigneeId: body.assigneeId,
         });
         if (!updated) return toTicketDTO(existing);
@@ -231,7 +238,6 @@ export function ticketsRouter(db: AnyDB) {
           200: ticketDTOSchema,
           400: errorResponseSchema,
           404: errorResponseSchema,
-          422: validationErrorSchema,
         },
       },
     )
@@ -240,23 +246,21 @@ export function ticketsRouter(db: AnyDB) {
       async ({ params }) => {
         const existing = await getTicketByTicketNumber(db, params.ticketNumber);
         if (!existing) {
-          throw error(404, {
-            error: "Not Found",
-            message: "Ticket not found",
-          });
+          throw error(404, { error: "Not Found", message: "Ticket not found" });
         }
         await closeTicket(db, existing.id);
-        return new Response(null, { status: 204 });
+        const closed = await getTicketById(db, existing.id);
+        return toTicketDTO(closed!);
       },
       {
         params: t.Object({
           ticketNumber: t.String({ pattern: "^[A-Za-z0-9]+-\\d+$" }),
         }),
         detail: {
-          summary: "Close ticket by ticket number (idempotent)",
+          summary: "Close ticket by ticket number",
           tags: ["tickets"],
         },
-        response: { 204: t.Void(), 404: errorResponseSchema, 422: validationErrorSchema },
+        response: { 200: ticketDTOSchema, 400: validationErrorSchema, 404: errorResponseSchema },
       },
     )
     .get(
@@ -277,7 +281,7 @@ export function ticketsRouter(db: AnyDB) {
           summary: "Get ticket by ID",
           tags: ["tickets"],
         },
-        response: { 200: ticketDTOSchema, 404: errorResponseSchema, 422: validationErrorSchema },
+        response: { 200: ticketDTOSchema, 400: validationErrorSchema, 404: errorResponseSchema },
       },
     )
     .put(
@@ -302,9 +306,9 @@ export function ticketsRouter(db: AnyDB) {
         const updated = await updateTicket(db, params.id, {
           title: body.title,
           description: body.description,
-          status: normalizeEnum(body.status, STATUSES, "status"),
-          priority: normalizeEnum(body.priority, PRIORITIES, "priority"),
-          category: normalizeEnum(body.category, CATEGORIES, "category"),
+          status: body.status,
+          priority: body.priority,
+          category: body.category,
           assigneeId: body.assigneeId,
         });
         if (!updated) return toTicketDTO(existing);
@@ -322,23 +326,27 @@ export function ticketsRouter(db: AnyDB) {
           200: ticketDTOSchema,
           400: errorResponseSchema,
           404: errorResponseSchema,
-          422: validationErrorSchema,
         },
       },
     )
     .delete(
       "/:id",
       async ({ params }) => {
+        const existing = await getTicketById(db, params.id);
+        if (!existing) {
+          throw error(404, { error: "Not Found", message: "Ticket not found" });
+        }
         await closeTicket(db, params.id);
-        return new Response(null, { status: 204 });
+        const closed = await getTicketById(db, params.id);
+        return toTicketDTO(closed!);
       },
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
         detail: {
-          summary: "Close ticket (idempotent)",
+          summary: "Close ticket",
           tags: ["tickets"],
         },
-        response: { 204: t.Void(), 404: errorResponseSchema, 422: validationErrorSchema },
+        response: { 200: ticketDTOSchema, 400: validationErrorSchema, 404: errorResponseSchema },
       },
     );
 }
