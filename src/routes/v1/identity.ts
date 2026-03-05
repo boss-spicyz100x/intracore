@@ -1,6 +1,10 @@
 import { Elysia, t } from "elysia";
 import type { AnyDB } from "../../db/tickets";
-import { errorResponseSchema } from "../../openapi/schemas";
+import {
+  errorResponseSchema,
+  identityResponseSchema,
+  validationErrorSchema,
+} from "../../openapi/schemas";
 import { employees } from "../../db/schema.postgres";
 import { eq, and, isNull } from "drizzle-orm";
 
@@ -50,7 +54,11 @@ export function identityRouter(db: AnyDB) {
     {
       body: verifyBody,
       detail: { summary: "Verify employee identity", tags: ["identity"] },
-      response: { 200: t.Any(), 401: errorResponseSchema, 422: t.Any() },
+      response: {
+        200: identityResponseSchema,
+        401: errorResponseSchema,
+        422: validationErrorSchema,
+      },
     },
   );
 }

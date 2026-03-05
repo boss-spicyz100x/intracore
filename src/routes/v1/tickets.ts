@@ -1,5 +1,5 @@
 import { Elysia, t, status as error } from "elysia";
-import { errorResponseSchema } from "../../openapi/schemas";
+import { errorResponseSchema, validationErrorSchema } from "../../openapi/schemas";
 import { v7 as uuidv7 } from "uuid";
 import type { AnyDB } from "../../db/tickets";
 import {
@@ -14,6 +14,7 @@ import {
   getEmployeeById,
   getTicketHistory,
 } from "../../db/tickets";
+import { toTicketDTO, ticketDTOSchema } from "../../types/ticket";
 
 const CATEGORIES = ["IT", "FACILITIES", "MISCELLANEOUS"] as const;
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH"] as const;
@@ -58,14 +59,14 @@ export function ticketsRouter(db: AnyDB) {
       "/",
       async () => {
         const tickets = await listTickets(db);
-        return tickets;
+        return tickets.map(toTicketDTO);
       },
       {
         detail: {
           summary: "List open tickets",
           tags: ["tickets"],
         },
-        response: { 200: t.Any() },
+        response: { 200: t.Array(ticketDTOSchema), 422: validationErrorSchema },
       },
     )
     .get(
@@ -85,7 +86,7 @@ export function ticketsRouter(db: AnyDB) {
           dateFrom: query.dateFrom,
           dateTo: query.dateTo,
         });
-        return tickets;
+        return tickets.map(toTicketDTO);
       },
       {
         query: t.Object({
@@ -100,7 +101,11 @@ export function ticketsRouter(db: AnyDB) {
           summary: "Get ticket history for employee",
           tags: ["tickets"],
         },
-        response: { 200: t.Any(), 400: errorResponseSchema, 422: t.Any() },
+        response: {
+          200: t.Array(ticketDTOSchema),
+          400: errorResponseSchema,
+          422: validationErrorSchema,
+        },
       },
     )
     .post(
@@ -143,7 +148,7 @@ export function ticketsRouter(db: AnyDB) {
           category: normalizeEnum(body.category, CATEGORIES, "category"),
         });
         const full = await getTicketById(db, ticket.id);
-        return full;
+        return toTicketDTO(full!);
       },
       {
         body: createTicketBody,
@@ -152,10 +157,10 @@ export function ticketsRouter(db: AnyDB) {
           tags: ["tickets"],
         },
         response: {
-          200: t.Any(),
+          200: ticketDTOSchema,
           400: errorResponseSchema,
           404: errorResponseSchema,
-          422: t.Any(),
+          422: validationErrorSchema,
         },
       },
     )
@@ -169,7 +174,7 @@ export function ticketsRouter(db: AnyDB) {
             message: "Ticket not found",
           });
         }
-        return ticket;
+        return toTicketDTO(ticket);
       },
       {
         params: t.Object({
@@ -179,7 +184,7 @@ export function ticketsRouter(db: AnyDB) {
           summary: "Get ticket by ticket number",
           tags: ["tickets"],
         },
-        response: { 200: t.Any(), 404: errorResponseSchema, 422: t.Any() },
+        response: { 200: ticketDTOSchema, 404: errorResponseSchema, 422: validationErrorSchema },
       },
     )
     .put(
@@ -209,8 +214,9 @@ export function ticketsRouter(db: AnyDB) {
           category: normalizeEnum(body.category, CATEGORIES, "category"),
           assigneeId: body.assigneeId,
         });
-        if (!updated) return existing;
-        return getTicketById(db, existing.id);
+        if (!updated) return toTicketDTO(existing);
+        const refreshed = await getTicketById(db, existing.id);
+        return refreshed ? toTicketDTO(refreshed) : toTicketDTO(existing);
       },
       {
         params: t.Object({
@@ -222,10 +228,10 @@ export function ticketsRouter(db: AnyDB) {
           tags: ["tickets"],
         },
         response: {
-          200: t.Any(),
+          200: ticketDTOSchema,
           400: errorResponseSchema,
           404: errorResponseSchema,
-          422: t.Any(),
+          422: validationErrorSchema,
         },
       },
     )
@@ -250,7 +256,7 @@ export function ticketsRouter(db: AnyDB) {
           summary: "Close ticket by ticket number (idempotent)",
           tags: ["tickets"],
         },
-        response: { 204: t.Void(), 404: errorResponseSchema, 422: t.Any() },
+        response: { 204: t.Void(), 404: errorResponseSchema, 422: validationErrorSchema },
       },
     )
     .get(
@@ -263,7 +269,7 @@ export function ticketsRouter(db: AnyDB) {
             message: "Ticket not found",
           });
         }
-        return ticket;
+        return toTicketDTO(ticket);
       },
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
@@ -271,7 +277,7 @@ export function ticketsRouter(db: AnyDB) {
           summary: "Get ticket by ID",
           tags: ["tickets"],
         },
-        response: { 200: t.Any(), 404: errorResponseSchema, 422: t.Any() },
+        response: { 200: ticketDTOSchema, 404: errorResponseSchema, 422: validationErrorSchema },
       },
     )
     .put(
@@ -301,8 +307,9 @@ export function ticketsRouter(db: AnyDB) {
           category: normalizeEnum(body.category, CATEGORIES, "category"),
           assigneeId: body.assigneeId,
         });
-        if (!updated) return existing;
-        return getTicketById(db, params.id);
+        if (!updated) return toTicketDTO(existing);
+        const refreshed = await getTicketById(db, params.id);
+        return refreshed ? toTicketDTO(refreshed) : toTicketDTO(existing);
       },
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
@@ -312,10 +319,10 @@ export function ticketsRouter(db: AnyDB) {
           tags: ["tickets"],
         },
         response: {
-          200: t.Any(),
+          200: ticketDTOSchema,
           400: errorResponseSchema,
           404: errorResponseSchema,
-          422: t.Any(),
+          422: validationErrorSchema,
         },
       },
     )
@@ -331,7 +338,7 @@ export function ticketsRouter(db: AnyDB) {
           summary: "Close ticket (idempotent)",
           tags: ["tickets"],
         },
-        response: { 204: t.Void(), 404: errorResponseSchema, 422: t.Any() },
+        response: { 204: t.Void(), 404: errorResponseSchema, 422: validationErrorSchema },
       },
     );
 }

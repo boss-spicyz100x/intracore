@@ -9,7 +9,8 @@ import {
   updateCompany,
   softDeleteCompany,
 } from "../../db/companies";
-import { errorResponseSchema } from "../../openapi/schemas";
+import { errorResponseSchema, validationErrorSchema } from "../../openapi/schemas";
+import { toCompanyDTO, companyDTOSchema } from "../../types/company";
 
 const SLUG_PATTERN = /^[A-Z0-9]+$/;
 
@@ -35,11 +36,11 @@ export function companiesRouter(db: AnyDB) {
       "/",
       async () => {
         const companies = await listCompanies(db);
-        return companies;
+        return companies.map(toCompanyDTO);
       },
       {
         detail: { summary: "List companies", tags: ["companies"] },
-        response: { 200: t.Any(), 422: t.Any() },
+        response: { 200: t.Array(companyDTOSchema), 422: validationErrorSchema },
       },
     )
     .post(
@@ -65,16 +66,16 @@ export function companiesRouter(db: AnyDB) {
           name: body.name,
           description: body.description,
         });
-        return company;
+        return toCompanyDTO(company);
       },
       {
         body: createCompanyBody,
         detail: { summary: "Create company", tags: ["companies"] },
         response: {
-          200: t.Any(),
+          200: companyDTOSchema,
           400: errorResponseSchema,
           409: errorResponseSchema,
-          422: t.Any(),
+          422: validationErrorSchema,
         },
       },
     )
@@ -88,12 +89,12 @@ export function companiesRouter(db: AnyDB) {
             message: "Company not found",
           });
         }
-        return company;
+        return toCompanyDTO(company);
       },
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
         detail: { summary: "Get company by ID", tags: ["companies"] },
-        response: { 200: t.Any(), 404: errorResponseSchema, 422: t.Any() },
+        response: { 200: companyDTOSchema, 404: errorResponseSchema, 422: validationErrorSchema },
       },
     )
     .put(
@@ -127,17 +128,18 @@ export function companiesRouter(db: AnyDB) {
           slug: body.slug !== undefined ? normalizeSlug(body.slug) : undefined,
           description: body.description,
         });
-        return updated!;
+        return toCompanyDTO(updated!);
       },
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
         body: updateCompanyBody,
         detail: { summary: "Update company", tags: ["companies"] },
         response: {
-          200: t.Any(),
+          200: companyDTOSchema,
+          400: errorResponseSchema,
           404: errorResponseSchema,
           409: errorResponseSchema,
-          422: t.Any(),
+          422: validationErrorSchema,
         },
       },
     )
@@ -150,7 +152,7 @@ export function companiesRouter(db: AnyDB) {
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
         detail: { summary: "Soft-delete company (idempotent)", tags: ["companies"] },
-        response: { 204: t.Void(), 422: t.Any() },
+        response: { 204: t.Void(), 422: validationErrorSchema },
       },
     );
 }

@@ -1,23 +1,9 @@
 import { eq, isNull, and, ne } from "drizzle-orm";
 import { employees } from "./schema.postgres";
 import type { AnyDB } from "./tickets";
+import type { EmployeeEntity } from "../types/employee";
 
-export type Employee = {
-  id: string;
-  employeeNumber: string;
-  fullName: string;
-  email: string;
-  phoneNumber: string;
-  department: string | null;
-  role: string | null;
-  preferredLanguage: string;
-  companyId: string;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
-};
-
-export async function listEmployees(db: AnyDB, companyId?: string): Promise<Employee[]> {
+export async function listEmployees(db: AnyDB, companyId?: string): Promise<EmployeeEntity[]> {
   const conditions = companyId
     ? and(eq(employees.companyId, companyId), isNull(employees.deletedAt))
     : isNull(employees.deletedAt);
@@ -25,7 +11,7 @@ export async function listEmployees(db: AnyDB, companyId?: string): Promise<Empl
   return rows;
 }
 
-export async function getEmployeeById(db: AnyDB, id: string): Promise<Employee | null> {
+export async function getEmployeeById(db: AnyDB, id: string): Promise<EmployeeEntity | null> {
   const [r] = await db
     .select()
     .from(employees)
@@ -38,7 +24,7 @@ export async function getEmployeeByEmail(
   db: AnyDB,
   email: string,
   excludeId?: string,
-): Promise<Employee | null> {
+): Promise<EmployeeEntity | null> {
   const conditions = excludeId
     ? and(eq(employees.email, email), ne(employees.id, excludeId), isNull(employees.deletedAt))
     : and(eq(employees.email, email), isNull(employees.deletedAt));
@@ -58,7 +44,10 @@ export type CreateEmployeeInput = {
   preferredLanguage?: string;
 };
 
-export async function createEmployee(db: AnyDB, input: CreateEmployeeInput): Promise<Employee> {
+export async function createEmployee(
+  db: AnyDB,
+  input: CreateEmployeeInput,
+): Promise<EmployeeEntity> {
   const now = new Date().toISOString();
   const [row] = await db
     .insert(employees)
@@ -93,7 +82,7 @@ export async function updateEmployee(
   db: AnyDB,
   id: string,
   input: UpdateEmployeeInput,
-): Promise<Employee | null> {
+): Promise<EmployeeEntity | null> {
   const now = new Date().toISOString();
   const values: Record<string, unknown> = { updatedAt: now };
   if (input.fullName !== undefined) values.fullName = input.fullName;

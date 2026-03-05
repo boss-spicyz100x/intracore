@@ -1,24 +1,9 @@
 import { eq, isNull, count, and, gte, lte, inArray } from "drizzle-orm";
 import type { BunSQLDatabase } from "drizzle-orm/bun-sql";
 import { companies, employees, tickets } from "./schema.postgres";
+import type { TicketEntity } from "../types/ticket";
 
 export type AnyDB = BunSQLDatabase<any>;
-
-export type TicketWithRelations = {
-  id: string;
-  ticketNumber: string;
-  title: string;
-  description: string | null;
-  status: string;
-  priority: string;
-  category: string | null;
-  createdAt: string;
-  updatedAt: string;
-  closedAt: string | null;
-  assignee: { id: string; fullName: string; email: string } | null;
-  reportedBy: { id: string; fullName: string; email: string };
-  company: { id: string; slug: string; name: string };
-};
 
 type EmployeeRow = { id: string; fullName: string; email: string };
 type CompanyRow = { id: string; slug: string; name: string };
@@ -55,11 +40,11 @@ async function fetchRelations(
   };
 }
 
-function toTicketWithRelations(
+function toTicketEntity(
   row: TicketRow,
   employeeMap: Map<string, EmployeeRow>,
   companyMap: Map<string, CompanyRow>,
-): TicketWithRelations | null {
+): TicketEntity | null {
   const reportedBy = employeeMap.get(row.reportedById);
   const company = companyMap.get(row.companyId);
   if (reportedBy === undefined || company === undefined) return null;
@@ -68,9 +53,9 @@ function toTicketWithRelations(
     ticketNumber: row.ticketNumber,
     title: row.title,
     description: row.description,
-    status: row.status,
-    priority: row.priority,
-    category: row.category,
+    status: row.status as TicketEntity["status"],
+    priority: row.priority as TicketEntity["priority"],
+    category: row.category as TicketEntity["category"],
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     closedAt: row.closedAt,
@@ -80,32 +65,32 @@ function toTicketWithRelations(
   };
 }
 
-export async function listTickets(db: AnyDB): Promise<TicketWithRelations[]> {
+export async function listTickets(db: AnyDB): Promise<TicketEntity[]> {
   const rows = await db.select().from(tickets).where(isNull(tickets.closedAt));
   const { employeeMap, companyMap } = await fetchRelations(db, rows);
   return rows
-    .map((r) => toTicketWithRelations(r, employeeMap, companyMap))
-    .filter((t): t is TicketWithRelations => t !== null);
+    .map((r) => toTicketEntity(r, employeeMap, companyMap))
+    .filter((t): t is TicketEntity => t !== null);
 }
 
-export async function getTicketById(db: AnyDB, id: string): Promise<TicketWithRelations | null> {
+export async function getTicketById(db: AnyDB, id: string): Promise<TicketEntity | null> {
   const rows = await db.select().from(tickets).where(eq(tickets.id, id)).limit(1);
   const row = rows[0];
   if (!row) return null;
   const { employeeMap, companyMap } = await fetchRelations(db, [row]);
-  return toTicketWithRelations(row, employeeMap, companyMap);
+  return toTicketEntity(row, employeeMap, companyMap);
 }
 
 export async function getTicketByTicketNumber(
   db: AnyDB,
   ticketNumber: string,
-): Promise<TicketWithRelations | null> {
+): Promise<TicketEntity | null> {
   const normalized = ticketNumber.toUpperCase();
   const rows = await db.select().from(tickets).where(eq(tickets.ticketNumber, normalized)).limit(1);
   const row = rows[0];
   if (!row) return null;
   const { employeeMap, companyMap } = await fetchRelations(db, [row]);
-  return toTicketWithRelations(row, employeeMap, companyMap);
+  return toTicketEntity(row, employeeMap, companyMap);
 }
 
 export type CreateTicketInput = {
@@ -191,7 +176,7 @@ export type TicketHistoryFilters = {
 export async function getTicketHistory(
   db: AnyDB,
   filters: TicketHistoryFilters,
-): Promise<TicketWithRelations[]> {
+): Promise<TicketEntity[]> {
   const conditions = [eq(tickets.reportedById, filters.employeeId)];
   if (filters.status !== undefined) conditions.push(eq(tickets.status, filters.status));
   if (filters.category !== undefined) conditions.push(eq(tickets.category, filters.category));
@@ -205,8 +190,8 @@ export async function getTicketHistory(
     .where(and(...conditions));
   const { employeeMap, companyMap } = await fetchRelations(db, rows);
   return rows
-    .map((r) => toTicketWithRelations(r, employeeMap, companyMap))
-    .filter((t): t is TicketWithRelations => t !== null);
+    .map((r) => toTicketEntity(r, employeeMap, companyMap))
+    .filter((t): t is TicketEntity => t !== null);
 }
 
 export async function closeTicket(db: AnyDB, id: string): Promise<boolean> {

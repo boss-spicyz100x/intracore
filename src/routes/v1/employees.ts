@@ -1,5 +1,5 @@
 import { Elysia, t, status as error } from "elysia";
-import { errorResponseSchema } from "../../openapi/schemas";
+import { errorResponseSchema, validationErrorSchema } from "../../openapi/schemas";
 import { v7 as uuidv7 } from "uuid";
 import type { AnyDB } from "../../db/tickets";
 import {
@@ -11,6 +11,7 @@ import {
   softDeleteEmployee,
 } from "../../db/employees";
 import { getCompanyById } from "../../db/companies";
+import { toEmployeeDTO, employeeDTOSchema } from "../../types/employee";
 
 const createEmployeeBody = t.Object({
   employeeNumber: t.String({ minLength: 1 }),
@@ -38,13 +39,13 @@ export function employeesRouter(db: AnyDB) {
       "/",
       async ({ query }) => {
         const employees = await listEmployees(db, query.companyId);
-        return employees;
+        return employees.map(toEmployeeDTO);
       },
       {
         query: t.Object({
           companyId: t.Optional(t.String({ format: "uuid" })),
         }),
-        response: { 200: t.Any() },
+        response: { 200: t.Array(employeeDTOSchema), 422: validationErrorSchema },
         detail: { summary: "List employees", tags: ["employees"] },
       },
     )
@@ -76,15 +77,15 @@ export function employeesRouter(db: AnyDB) {
           role: body.role,
           preferredLanguage: body.preferredLanguage,
         });
-        return employee;
+        return toEmployeeDTO(employee);
       },
       {
         body: createEmployeeBody,
         response: {
-          200: t.Any(),
+          200: employeeDTOSchema,
           404: errorResponseSchema,
           409: errorResponseSchema,
-          422: t.Any(),
+          422: validationErrorSchema,
         },
         detail: { summary: "Create employee", tags: ["employees"] },
       },
@@ -99,14 +100,14 @@ export function employeesRouter(db: AnyDB) {
             message: "Employee not found",
           });
         }
-        return employee;
+        return toEmployeeDTO(employee);
       },
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
         response: {
-          200: t.Any(),
+          200: employeeDTOSchema,
           404: errorResponseSchema,
-          422: t.Any(),
+          422: validationErrorSchema,
         },
         detail: { summary: "Get employee by ID", tags: ["employees"] },
       },
@@ -138,16 +139,16 @@ export function employeesRouter(db: AnyDB) {
           role: body.role,
           preferredLanguage: body.preferredLanguage,
         });
-        return updated!;
+        return toEmployeeDTO(updated!);
       },
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
         body: updateEmployeeBody,
         response: {
-          200: t.Any(),
+          200: employeeDTOSchema,
           404: errorResponseSchema,
           409: errorResponseSchema,
-          422: t.Any(),
+          422: validationErrorSchema,
         },
         detail: { summary: "Update employee", tags: ["employees"] },
       },
@@ -160,7 +161,7 @@ export function employeesRouter(db: AnyDB) {
       },
       {
         params: t.Object({ id: t.String({ format: "uuid" }) }),
-        response: { 204: t.Void(), 422: t.Any() },
+        response: { 204: t.Void(), 422: validationErrorSchema },
         detail: { summary: "Soft-delete employee (idempotent)", tags: ["employees"] },
       },
     );
