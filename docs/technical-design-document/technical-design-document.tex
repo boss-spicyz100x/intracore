@@ -84,6 +84,18 @@ The implemented scope includes:
   \item \textbf{Multilingual:} Support for multiple languages in both voice and xApps
 \end{itemize}
 
+\section{Technology Stack}
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Runtime:} \href{https://bun.com}{Bun}
+  \item \textbf{Web Framework:} \href{https://elysiajs.com}{Elysia}
+  \item \textbf{ORM:} \href{https://orm.drizzle.team}{Drizzle}
+  \item \textbf{Database:} \href{https://postgresql.org}{Postgres}
+  \item \textbf{Logging:} \href{https://github.com/pinojs/pino}{Pino}
+  \item \textbf{xApp UI:} \href{https://github.com/material-components/material-web}{Material Web} (md-* components)
+\end{itemize}
+
+\clearpage
 \section{System Overview}
 
 \subsection{Architecture}
@@ -288,17 +300,6 @@ The following diagrams depict the flow (user connects via a public phone number 
 \end{figure}
 
 \clearpage
-\section{Technology Stack}
-
-\begin{itemize}[noitemsep]
-  \item \textbf{Runtime:} \href{https://bun.com}{Bun}
-  \item \textbf{Web Framework:} \href{https://elysiajs.com}{Elysia}
-  \item \textbf{ORM:} \href{https://orm.drizzle.team}{Drizzle}
-  \item \textbf{Database:} \href{https://postgresql.org}{Postgres}
-  \item \textbf{Logging:} \href{https://github.com/pinojs/pino}{Pino}
-  \item \textbf{xApp UI:} \href{https://github.com/material-components/material-web}{Material Web} (md-* components)
-\end{itemize}
-
 \section{Data Model}
 
 \subsection{companies}
@@ -416,6 +417,7 @@ Search history & GET /v1/tickets/history?employeeId=\{employeeId\} \\
 \subsection{OpenAPI}
 Interactive API documentation: \url{https://intracore.eden.spicyz.io/docs}
 
+\clearpage
 \section{Identity and Verification}
 
 \texttt{POST /v1/auth/verify} requires a valid Bearer token and accepts:
@@ -463,6 +465,7 @@ Three xApps are provided, built with the Cognigy app-page SDK and Material Web:
 
 All xApps use \texttt{/sdk/app-page-sdk.js}, Material Web components (\texttt{md-outlined-text-field}, \texttt{md-filled-button}, \texttt{md-outlined-select}), and multilingual labels.
 
+\clearpage
 \section{Deployment}
 
 \subsection{Docker}
