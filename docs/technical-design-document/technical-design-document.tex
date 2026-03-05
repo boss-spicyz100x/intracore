@@ -9,7 +9,74 @@
 \usepackage{enumitem}
 \usepackage{float}
 \usepackage{tikz}
+\usetikzlibrary{positioning}
+\usetikzlibrary{shapes.multipart}
+\usetikzlibrary{calc}
 \usepackage{pgf-umlsd}
+
+\makeatletter
+\pgfarrowsdeclare{crow's foot}{crow's foot}{
+  \pgfarrowsleftextend{+-.5\pgflinewidth}%
+  \pgfarrowsrightextend{+.5\pgflinewidth}%
+}{
+  \pgfutil@tempdima=0.6pt%
+  \pgfsetdash{}{+0pt}%
+  \pgfsetmiterjoin%
+  \pgfpathmoveto{\pgfqpoint{0pt}{-9\pgfutil@tempdima}}%
+  \pgfpathlineto{\pgfqpoint{-13\pgfutil@tempdima}{0pt}}%
+  \pgfpathlineto{\pgfqpoint{0pt}{9\pgfutil@tempdima}}%
+  \pgfpathmoveto{\pgfqpoint{-8pt}{-6pt}}%
+  \pgfpathlineto{\pgfqpoint{-8pt}{6pt}}%
+  \pgfusepathqstroke%
+}
+\pgfarrowsdeclare{omany}{omany}{
+  \pgfarrowsleftextend{+-.5\pgflinewidth}%
+  \pgfarrowsrightextend{+.5\pgflinewidth}%
+}{
+  \pgfutil@tempdima=0.6pt%
+  \pgfsetdash{}{+0pt}%
+  \pgfsetmiterjoin%
+  \pgfpathmoveto{\pgfqpoint{0pt}{-9\pgfutil@tempdima}}%
+  \pgfpathlineto{\pgfqpoint{-13\pgfutil@tempdima}{0pt}}%
+  \pgfpathlineto{\pgfqpoint{0pt}{9\pgfutil@tempdima}}%
+  \pgfsetfillcolor{white}%
+  \pgfpathcircle{\pgfpoint{-11.5pt}{0}}{3.5pt}%
+  \pgfusepathqfillstroke%
+}
+\pgfarrowsdeclare{one}{one}{
+  \pgfarrowsleftextend{+-.5\pgflinewidth}%
+  \pgfarrowsrightextend{+.5\pgflinewidth}%
+}{
+  \pgfutil@tempdima=0.6pt%
+  \pgfsetdash{}{+0pt}%
+  \pgfsetmiterjoin%
+  \pgfpathmoveto{\pgfqpoint{-6pt}{-6pt}}%
+  \pgfpathlineto{\pgfqpoint{-6pt}{6pt}}%
+  \pgfpathmoveto{\pgfqpoint{-8pt}{-6pt}}%
+  \pgfpathlineto{\pgfqpoint{-8pt}{6pt}}%
+  \pgfusepathqstroke%
+}
+\pgfarrowsdeclare{oone}{oone}{
+  \pgfarrowsleftextend{+-.5\pgflinewidth}%
+  \pgfarrowsrightextend{+.5\pgflinewidth}%
+}{
+  \pgfutil@tempdima=0.6pt%
+  \pgfsetdash{}{+0pt}%
+  \pgfsetmiterjoin%
+  \pgfpathmoveto{\pgfqpoint{-4pt}{-6pt}}%
+  \pgfpathlineto{\pgfqpoint{-4pt}{6pt}}%
+  \pgfsetfillcolor{white}%
+  \pgfpathcircle{\pgfpoint{-11.5pt}{0}}{3.5pt}%
+  \pgfusepathqfillstroke%
+}
+\makeatother
+
+\tikzset{
+  one to many/.style={one-crow's foot},
+  one to omany/.style={one-omany},
+  one to one/.style={one-one},
+  one to oone/.style={one-oone}
+}
 \usepgflibrary{arrows}
 
 \hypersetup{
@@ -311,6 +378,64 @@ The following diagrams depict the flow (user connects via a public phone number 
 
 \clearpage
 \section{Data Model}
+
+\subsection{Entity Relationship Diagram}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+    every node/.style={font=\small},
+    every second node part/.style={font=\scriptsize},
+    entity/.style={
+      draw, rectangle split, rectangle split parts=2,
+      text width=5.5em, text centered,
+      rectangle split part align={center,left}
+    }
+  ]
+    \node[entity] (companies) {companies
+      \nodepart{second}
+      id (PK)\\
+      slug\\
+      name\\
+      description
+    };
+    \node[entity, below=2.5cm of companies] (employees) {employees
+      \nodepart{second}
+      id (PK)\\
+      employee\_number\\
+      full\_name\\
+      email\\
+      company\_id (FK)
+    };
+    \node[entity, right=5cm of employees] (tickets) {tickets
+      \nodepart{second}
+      id (PK)\\
+      ticket\_number\\
+      title\\
+      status\\
+      company\_id (FK)\\
+      reported\_by\_id (FK)\\
+      assignee\_id (FK)
+    };
+    \node[entity, right=4.5cm of companies] (sessions) {sessions
+      \nodepart{second}
+      id (PK)\\
+      token\_hash\\
+      email
+    };
+    \node[entity, right=4.5cm of sessions] (whitelists) {whitelists
+      \nodepart{second}
+      id (PK)\\
+      email
+    };
+
+    \draw[one to many] (companies.south) -- node[left, font=\scriptsize] {company\_id} (employees.north);
+    \draw[one to many] (companies.south) to[bend left=25] node[above, pos=0.5, font=\scriptsize] {company\_id} (tickets.north);
+    \draw[one to many] (employees.east) -- node[above, font=\scriptsize] {reported\_by\_id} (tickets.west);
+    \draw[one to omany] (employees.east) to[bend right=15] node[below, pos=0.5, font=\scriptsize] {assignee\_id} (tickets.west);
+  \end{tikzpicture}
+  \caption{Database entity relationship diagram (crow's foot notation). companies and employees are core entities; tickets references both. sessions and whitelists are standalone (auth).}
+\end{figure}
 
 \subsection{companies}
 \begin{lstlisting}[language=SQL]
