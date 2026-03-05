@@ -35,28 +35,34 @@
         box-sizing: border-box;
       }
 
-      body {
+      html, body {
         margin: 0;
-        min-height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
         font-family: "Roboto", "Google Sans", system-ui, sans-serif;
         background: #fff;
+      }
+
+      body {
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 2rem 1.5rem;
       }
 
       .verification-card {
+        flex: 1;
+        min-height: 0;
         width: 100%;
-        max-width: 450px;
+        max-width: 500px;
         display: flex;
         flex-direction: column;
-        justify-content: flex-start;
+        padding: 2rem 1.5rem 0;
       }
 
       .verification-header {
+        flex-shrink: 0;
         text-align: left;
-        margin-bottom: 2.5rem;
+        margin-bottom: 1rem;
       }
 
       .verification-header .emoji-icon {
@@ -80,10 +86,17 @@
         font-weight: 400;
       }
 
+      .verification-scroll {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+      }
+
       #verification-form {
         display: flex;
         flex-direction: column;
         gap: 1.5rem;
+        padding-bottom: 1rem;
       }
 
       .form-footer {
@@ -104,10 +117,10 @@
       }
 
       .page-footer {
-        margin-top: auto;
-        padding-top: 2rem;
+        flex-shrink: 0;
         width: 100%;
-        max-width: 450px;
+        max-width: 500px;
+        padding: 1.5rem 1.5rem 2rem;
         display: flex;
         justify-content: flex-start;
         align-items: center;
@@ -124,6 +137,7 @@
         <p id="i18n-subtitle" class="md-typescale-body-large">Use your account details</p>
       </div>
 
+      <div class="verification-scroll">
       <form id="verification-form">
         <md-outlined-text-field
           id="phone-number"
@@ -152,6 +166,7 @@
           <md-filled-button type="submit" id="submit-button">Submit</md-filled-button>
         </div>
       </form>
+      </div>
     </div>
 
     <footer class="page-footer">
