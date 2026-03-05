@@ -36,3 +36,11 @@ report.[0-9].[0-9].[0-9].[0-9].json
 # OS
 .DS_Store
 Thumbs.db
+
+# LaTeX
+*.aux
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz

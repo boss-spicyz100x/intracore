@@ -1,0 +1,413 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{pgf-umlsd}
+\usepgflibrary{arrows}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  urlcolor=blue,
+  citecolor=blue
+}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny,
+  showstringspaces=false
+}
+
+\title{\textbf{Technical Design Document}\\[0.5em]
+\large IntraCore Solutions\\
+\large Voice Assistant for IT Ticketing and Identity Verification\\
+\large Version 1.0.0\\
+\large March 5, 2026}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This document describes the technical design of a voice assistant for IT ticketing and identity verification, built for IntraCore Solutions as a Cognigy Capstone project. The system combines Cognigy.AI conversational AI with xApps for visual interaction, backed by a REST API that integrates with PostgreSQL for persistent data. Users can verify their identity via voice (ANI/phone, email, employee number), manage internal support tickets, and access FAQ content through WebRTC or dial-in voice channels in multiple languages.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+
+\subsection{Purpose}
+This Technical Design Document (TDD) provides a structured walkthrough of the Cognigy Capstone solution for IntraCore Solutions. It serves as the primary reference for understanding the architecture, APIs, data model, and deployment of the voice assistant system.
+
+\subsection{Scope}
+The document covers the full technical implementation: REST API backend, Cognigy voice agent integration, xApp interfaces, identity verification, ticketing workflows, and deployment infrastructure.
+
+\subsection{Audience}
+This document is intended for capstone evaluators, customer stakeholders, and technical team members who need to understand or extend the system.
+
+\section{Business Context}
+
+IntraCore Solutions is a fictional mid-sized technology firm with distributed teams across multiple locations. The organization operates a shared internal support center that handles IT requests, facilities issues, and general inquiries. The voice assistant project aims to:
+
+\begin{itemize}[noitemsep]
+  \item Automate common support interactions via voice
+  \item Provide secure identity verification before sensitive operations
+  \item Support multilingual employees (English, Thai, Japanese, German)
+  \item Reduce load on human agents for routine tasks
+\end{itemize}
+
+\section{Capstone Scope}
+
+The implemented scope includes:
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Identity \& Verification (ID\&V):} Verification via ANI/phone number, email, and employee number; matches against the employees table
+  \item \textbf{Internal Ticketing:} Open (create), Check Status, Update, Close, and Search History
+  \item \textbf{FAQ:} Common questions answered by the voice agent
+  \item \textbf{Voice Channels:} WebRTC and dial-in
+  \item \textbf{Multilingual:} Support for multiple languages in both voice and xApps
+\end{itemize}
+
+\section{System Overview}
+
+\subsection{Architecture}
+The system follows a three-tier architecture:
+
+\begin{enumerate}[noitemsep]
+  \item \textbf{Cognigy Voice Agent} --- Handles speech recognition, NLU, and dialog management; invokes REST API for backend operations
+  \item \textbf{REST API} --- Elysia-based backend on Bun; validates requests, enforces auth, and performs business logic
+  \item \textbf{PostgreSQL} --- Persistent storage for companies, employees, tickets, sessions, and whitelists
+\end{enumerate}
+
+\subsection{Flow}
+\begin{enumerate}[noitemsep]
+  \item User connects via WebRTC or dial-in
+  \item Cognigy agent authenticates via GitHub OAuth $\rightarrow$ POST /v1/auth/token
+  \item Agent calls POST /v1/auth/verify with phone, email, employee number for ID\&V
+  \item Agent calls ticket APIs (create, list, update, close, history) with Bearer token
+  \item xApps (verification, ticket-list, ticket-detail) are shown in Cognigy when needed; they use the app-page SDK to submit data back to the agent
+\end{enumerate}
+
+\subsection{Sequence Diagrams}
+
+The following diagrams depict the flow (user connects via a public phone number or WebRTC).
+
+\subsubsection{Authentication Flow}
+\begin{figure}[htbp]
+  \centering
+  \begin{sequencediagram}
+    \newthread{user}{User}
+    \newinst{agent}{Cognigy}
+    \newinst{api}{IntraCore API}
+    \newinst{gh}{GitHub}
+    \newinst{db}{Database}
+    \begin{call}[1]{user}{Make call}{agent}{Authenticated}
+      \begin{call}[2]{agent}{POST /v1/auth/token}{api}{accessToken, expiresAt}
+        \begin{call}[1]{api}{GET user}{gh}{email, profile}
+        \end{call}
+        \begin{call}[1]{api}{SELECT whitelists}{db}{allowed?}
+        \end{call}
+        \begin{call}[1]{api}{INSERT sessions}{db}{OK}
+        \end{call}
+      \end{call}
+    \end{call}
+  \end{sequencediagram}
+  \caption{Authentication: User makes call to Cognigy; Cognigy calls POST /v1/auth/token; API validates with GitHub, checks whitelist, creates session; Cognigy proceeds with authenticated user. Note: githubToken is supplied by the Cognigy actor.}
+\end{figure}
+
+\subsubsection{Identity and Verification Flow}
+\begin{figure}[htbp]
+  \centering
+  \begin{sequencediagram}
+    \newthread{user}{User}
+    \newinst{xapp}{xApp}
+    \newthread{agent}{Cognigy}
+    \newinst{api}{IntraCore API}
+    \newinst{db}{Database}
+
+    \mess{agent}{Email xApp link}{user}
+    \begin{call}[1]{user}{Open xApp link}{user}{}
+    \end{call}
+    \begin{call}[1]{user}{Submit credentials}{xapp}{}
+      \begin{call}[1]{xapp}{Forward credentials}{agent}{}
+      \end{call}
+    \end{call}
+    \begin{call}[2]{agent}{POST /v1/auth/verify}{api}{id, fullName, preferredLanguage}
+      \begin{call}[1]{api}{Validate session}{db}{valid?}
+      \end{call}
+      \begin{call}[1]{api}{Match employee}{db}{employee?}
+      \end{call}
+    \end{call}
+  \end{sequencediagram}
+  \caption{ID\&V: User requests identity verification; Cognigy emails xApp link; user opens link, submits credentials to xApp; xApp forwards to Cognigy; API matches against employees table; Cognigy returns verified identity to user.}
+\end{figure}
+
+\subsubsection{Ticket Creation Flow}
+\begin{figure}[htbp]
+  \centering
+  \begin{sequencediagram}
+    \newthread{user}{User}
+    \newinst{agent}{Cognigy}
+    \newinst{api}{IntraCore API}
+    \newinst{db}{Database}
+    \begin{call}[1]{user}{Create ticket}{agent}{ticket}
+      \begin{call}[1]{agent}{Prompt: describe issue}{user}{OK}
+      \end{call}
+      \begin{call}[2]{agent}{POST /v1/tickets}{api}{ticket}
+        \begin{call}[1]{api}{Validate company, reporter}{db}{OK}
+        \end{call}
+        \begin{call}[1]{api}{Count tickets}{db}{count}
+        \end{call}
+        \begin{call}[1]{api}{Insert ticket}{db}{OK}
+        \end{call}
+      \end{call}
+    \end{call}
+  \end{sequencediagram}
+  \caption{Ticket creation: User requests ticket creation; Cognigy prompts for issue description; API validates and inserts ticket; Cognigy returns ticket to user.}
+\end{figure}
+
+\section{Technology Stack}
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Runtime:} Bun
+  \item \textbf{Web Framework:} Elysia
+  \item \textbf{ORM:} Drizzle
+  \item \textbf{Database:} PostgreSQL
+  \item \textbf{Logging:} Pino
+  \item \textbf{xApp UI:} Material Web (md-* components)
+\end{itemize}
+
+\section{Data Model}
+
+\subsection{companies}
+\begin{lstlisting}[language=SQL]
+id          TEXT PRIMARY KEY
+slug        TEXT NOT NULL UNIQUE
+name        TEXT NOT NULL
+description TEXT
+created_at  TEXT NOT NULL
+updated_at  TEXT NOT NULL
+deleted_at  TEXT
+\end{lstlisting}
+
+\subsection{employees}
+\begin{lstlisting}[language=SQL]
+id                 TEXT PRIMARY KEY
+employee_number    TEXT NOT NULL
+full_name          TEXT NOT NULL
+email              TEXT NOT NULL UNIQUE
+phone_number       TEXT NOT NULL
+department         TEXT
+role               TEXT
+preferred_language TEXT NOT NULL DEFAULT 'en-US'
+company_id         TEXT NOT NULL REFERENCES companies(id)
+created_at         TEXT NOT NULL
+updated_at         TEXT NOT NULL
+deleted_at         TEXT
+UNIQUE(company_id, employee_number)
+\end{lstlisting}
+
+\subsection{tickets}
+\begin{lstlisting}[language=SQL]
+id             TEXT PRIMARY KEY
+ticket_number  TEXT NOT NULL UNIQUE
+title          TEXT NOT NULL
+description    TEXT
+status         TEXT NOT NULL DEFAULT 'NEW'
+  -- NEW | PENDING | RESOLVED | CANCELLED | CLOSED
+priority       TEXT NOT NULL DEFAULT 'MEDIUM'
+  -- LOW | MEDIUM | HIGH
+category       TEXT
+  -- IT | FACILITIES | MISCELLANEOUS
+assignee_id    TEXT REFERENCES employees(id)
+reported_by_id TEXT NOT NULL REFERENCES employees(id)
+company_id     TEXT NOT NULL REFERENCES companies(id)
+created_at     TEXT NOT NULL
+updated_at     TEXT NOT NULL
+closed_at      TEXT
+\end{lstlisting}
+
+\subsection{sessions}
+\begin{lstlisting}[language=SQL]
+id          TEXT PRIMARY KEY
+token_hash  TEXT NOT NULL UNIQUE
+email       TEXT NOT NULL
+expires_at  TEXT NOT NULL
+created_at  TEXT NOT NULL
+\end{lstlisting}
+
+\subsection{whitelists}
+\begin{lstlisting}[language=SQL]
+id         TEXT PRIMARY KEY
+email      TEXT NOT NULL UNIQUE
+created_at TEXT NOT NULL
+\end{lstlisting}
+
+\section{API Design}
+
+\subsection{Public Endpoints}
+\begin{itemize}[noitemsep]
+  \item \texttt{GET /} --- Health/root response
+  \item \texttt{GET /health} --- Health check
+  \item \texttt{POST /v1/auth/token} --- Exchange GitHub token for session (body or Bearer)
+\end{itemize}
+
+\subsection{Protected Endpoints (Bearer Auth)}
+\begin{itemize}[noitemsep]
+  \item \texttt{POST /v1/auth/verify} --- Identity verification (phoneNumber, email, employeeNumber)
+  \item \texttt{GET /v1/tickets} --- List tickets
+  \item \texttt{POST /v1/tickets} --- Create ticket
+  \item \texttt{GET /v1/tickets/:id} --- Get ticket by ID
+  \item \texttt{PUT /v1/tickets/:id} --- Update ticket
+  \item \texttt{DELETE /v1/tickets/:id} --- Close ticket
+  \item \texttt{GET /v1/tickets/number/:ticketNumber} --- Get ticket by ticket number
+  \item \texttt{PUT /v1/tickets/number/:ticketNumber} --- Update ticket by number
+  \item \texttt{DELETE /v1/tickets/number/:ticketNumber} --- Close ticket by number
+  \item \texttt{GET /v1/tickets/history?employeeId=} --- Ticket history for employee
+  \item \texttt{GET|POST /v1/companies}, \texttt{GET|PUT|DELETE /v1/companies/:id}
+  \item \texttt{GET|POST /v1/employees}, \texttt{GET|PUT|DELETE /v1/employees/:id}
+  \item \texttt{GET|POST /v1/whitelists}, \texttt{GET|PUT|DELETE /v1/whitelists/:id}
+  \item \texttt{GET /v1/sessions}, \texttt{GET|DELETE /v1/sessions/:id}
+\end{itemize}
+
+\subsection{Use Case to API Mapping}
+\begin{longtable}{@{}ll@{}}
+\toprule
+\textbf{Use Case} & \textbf{API} \\
+\midrule
+\endfirsthead
+
+\toprule
+\textbf{Use Case} & \textbf{API} \\
+\midrule
+\endhead
+
+ID\&V & POST /v1/auth/verify \\
+Open ticket & POST /v1/tickets \\
+Check status & GET /v1/tickets/number/:ticketNumber or GET /v1/tickets/:id \\
+Update ticket & PUT /v1/tickets/:id or PUT /v1/tickets/number/:ticketNumber \\
+Close ticket & DELETE /v1/tickets/:id or DELETE /v1/tickets/number/:ticketNumber \\
+Search history & GET /v1/tickets/history?employeeId= \\
+\bottomrule
+\end{longtable}
+
+\subsection{OpenAPI}
+Interactive API documentation is available at \texttt{/docs}.
+
+\section{Identity and Verification}
+
+\texttt{POST /v1/auth/verify} requires a valid Bearer token and accepts:
+
+\begin{lstlisting}
+{
+  "phoneNumber": "+1234567890",
+  "email": "user@example.com",
+  "employeeNumber": "12345"
+}
+\end{lstlisting}
+
+The API matches all three fields against the \texttt{employees} table (excluding soft-deleted rows). On success it returns:
+
+\begin{lstlisting}
+{
+  "id": "uuid",
+  "fullName": "Jane Doe",
+  "email": "user@example.com",
+  "preferredLanguage": "en-US"
+}
+\end{lstlisting}
+
+On failure: 401 with \texttt{\{"error":"Unauthorized","message":"Identity verification failed"\}}.
+
+\section{Authentication}
+
+\begin{enumerate}[noitemsep]
+  \item User authenticates with GitHub OAuth (outside this API)
+  \item Client sends GitHub token to \texttt{POST /v1/auth/token} (in body as \texttt{githubToken} or in \texttt{Authorization: Bearer <token>})
+  \item API validates GitHub token and checks email against \texttt{whitelists}
+  \item If whitelisted, API creates a session and returns \texttt{accessToken}, \texttt{expiresAt}, \texttt{tokenType: "Bearer"}
+  \item All protected routes require \texttt{Authorization: Bearer <accessToken>}
+\end{enumerate}
+
+\section{Cognigy xApps}
+
+Three xApps are provided, built with the Cognigy app-page SDK and Material Web:
+
+\begin{itemize}[noitemsep]
+  \item \textbf{verification.html} --- Collects phone number, email, employee number; submits via \texttt{SDK.submit(\{phoneNumber, email, employeeNumber\})}
+  \item \textbf{ticket-list.html} --- Displays ticket history with status/priority badges; supports en, th, ja, de
+  \item \textbf{ticket-detail.html} --- Shows full ticket details (status, priority, category, description, company, reporter, assignee, dates)
+\end{itemize}
+
+All xApps use \texttt{/sdk/app-page-sdk.js}, Material Web components (\texttt{md-outlined-text-field}, \texttt{md-filled-button}, \texttt{md-outlined-select}), and multilingual labels.
+
+\section{Deployment}
+
+\subsection{Docker}
+Multi-stage build:
+
+\begin{lstlisting}[language=bash]
+# Stage 1: Build
+FROM oven/bun:1 AS builder
+WORKDIR /app
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
+COPY . .
+RUN bun build --compile --minify server.ts --outfile intracore
+
+# Stage 2: Runtime
+FROM gcr.io/distroless/cc-debian12:nonroot
+WORKDIR /app
+COPY --from=builder --chown=65532:65532 /app/intracore .
+EXPOSE 3000
+ENV PORT=3000
+CMD ["/app/intracore"]
+\end{lstlisting}
+
+\subsection{Environment}
+\begin{itemize}[noitemsep]
+  \item \texttt{DATABASE\_URL} --- PostgreSQL connection string
+  \item \texttt{PORT} --- Server port (default 3000)
+\end{itemize}
+
+\section{CI/CD}
+
+GitHub Actions workflow \texttt{.github/workflows/docker-publish.yml}:
+
+\begin{itemize}[noitemsep]
+  \item Triggers on push to \texttt{main}
+  \item Logs in to \texttt{ghcr.io}
+  \item Builds and pushes image to \texttt{ghcr.io/boss-spicyz100x/intracore:latest} and \texttt{ghcr.io/boss-spicyz100x/intracore:<sha>}
+\end{itemize}
+
+\section{Security}
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Token hashing:} Session tokens are hashed (SHA-256) before storage; only the hash is stored
+  \item \textbf{Whitelist:} Only whitelisted emails can obtain session tokens
+  \item \textbf{HTTPS:} Production deployments should use HTTPS (handled by ingress/load balancer)
+\end{itemize}
+
+\section{Deliverables Summary}
+
+\begin{itemize}[noitemsep]
+  \item Voice agent with Cognigy flow design
+  \item REST API integration for ID\&V and ticketing
+  \item xApp (verification, ticket-list, ticket-detail)
+  \item Multilingual support (en, th, ja, de)
+  \item Presentations and documentation for capstone evaluation
+\end{itemize}
+
+\end{document}
