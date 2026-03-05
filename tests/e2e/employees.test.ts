@@ -168,6 +168,47 @@ test("GET /v1/employees/:id non-existent returns 404", async () => {
   });
 });
 
+test("GET /v1/employees/phone/:phoneNumber returns employee", async () => {
+  const db = await createTestDb();
+  const companyId = await seedCompany(db);
+  const app = createTestApp(db);
+  const createRes = await app.handle(
+    new Request("http://localhost/v1/employees", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        employeeNumber: "001",
+        fullName: "Phone Lookup",
+        email: "phone@test.com",
+        phoneNumber: "+15551234567",
+        companyId,
+      }),
+    }),
+  );
+  expect(createRes.status).toBe(200);
+
+  const phoneEncoded = encodeURIComponent("+15551234567");
+  const res = await app.handle(new Request(`http://localhost/v1/employees/phone/${phoneEncoded}`));
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as Record<string, unknown>;
+  expect(body.fullName).toBe("Phone Lookup");
+  expect(body.email).toBe("phone@test.com");
+  expect(body.phoneNumber).toBe("+15551234567");
+});
+
+test("GET /v1/employees/phone/:phoneNumber non-existent returns 404", async () => {
+  const db = await createTestDb();
+  const app = createTestApp(db);
+  const phoneEncoded = encodeURIComponent("+15559999999");
+  const res = await app.handle(new Request(`http://localhost/v1/employees/phone/${phoneEncoded}`));
+  expect(res.status).toBe(404);
+  const body = await res.json();
+  expect(body).toMatchObject({
+    error: "Not Found",
+    message: "Employee not found",
+  });
+});
+
 test("GET /v1/employees?companyId= filters by company", async () => {
   const db = await createTestDb();
   const companyId1 = await seedCompany(db, { slug: "CO1" });

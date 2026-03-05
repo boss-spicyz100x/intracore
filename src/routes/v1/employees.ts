@@ -6,6 +6,7 @@ import {
   listEmployees,
   getEmployeeById,
   getEmployeeByEmail,
+  getEmployeeByPhoneNumber,
   createEmployee,
   updateEmployee,
   softDeleteEmployee,
@@ -96,6 +97,28 @@ export function employeesRouter(db: AnyDB) {
           409: errorResponseSchema,
         },
         detail: { summary: "Create employee", tags: ["employees"] },
+      },
+    )
+    .get(
+      "/phone/:phoneNumber",
+      async ({ params }) => {
+        const employee = await getEmployeeByPhoneNumber(db, params.phoneNumber);
+        if (!employee) {
+          throw error(404, {
+            error: "Not Found",
+            message: "Employee not found",
+          });
+        }
+        return toEmployeeDTO(employee);
+      },
+      {
+        params: t.Object({ phoneNumber: t.String({ minLength: 1 }) }),
+        response: {
+          200: employeeDTOSchema,
+          400: validationErrorSchema,
+          404: errorResponseSchema,
+        },
+        detail: { summary: "Get employee by phone number", tags: ["employees"] },
       },
     )
     .get(

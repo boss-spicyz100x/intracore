@@ -5,6 +5,7 @@ import {
   listEmployees,
   getEmployeeById,
   getEmployeeByEmail,
+  getEmployeeByPhoneNumber,
   createEmployee,
   updateEmployee,
   softDeleteEmployee,
@@ -244,6 +245,60 @@ test("getEmployeeByEmail with excludeId excludes that employee", async () => {
   const withoutExclude = await getEmployeeByEmail(db, "jane@ing.com");
   expect(withoutExclude).not.toBeNull();
   expect(withoutExclude!.id).toBe(id);
+});
+
+test("getEmployeeByPhoneNumber returns employee when found", async () => {
+  const db = await createTestDb();
+  const companyId = await seedCompany(db);
+  const id = uuidv7();
+  const now = new Date().toISOString();
+  await db.insert(employees).values({
+    id,
+    employeeNumber: "001",
+    fullName: "Jane",
+    email: "jane@ing.com",
+    phoneNumber: "+15551234567",
+    department: null,
+    role: null,
+    preferredLanguage: "en-US",
+    companyId,
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: null,
+  });
+  const result = await getEmployeeByPhoneNumber(db, "+15551234567");
+  expect(result).not.toBeNull();
+  expect(result!.phoneNumber).toBe("+15551234567");
+  expect(result!.fullName).toBe("Jane");
+});
+
+test("getEmployeeByPhoneNumber returns null when not found", async () => {
+  const db = await createTestDb();
+  const result = await getEmployeeByPhoneNumber(db, "+15559999999");
+  expect(result).toBeNull();
+});
+
+test("getEmployeeByPhoneNumber returns null when soft-deleted", async () => {
+  const db = await createTestDb();
+  const companyId = await seedCompany(db);
+  const id = uuidv7();
+  const now = new Date().toISOString();
+  await db.insert(employees).values({
+    id,
+    employeeNumber: "001",
+    fullName: "Deleted",
+    email: "del@ing.com",
+    phoneNumber: "+15551234567",
+    department: null,
+    role: null,
+    preferredLanguage: "en-US",
+    companyId,
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: now,
+  });
+  const result = await getEmployeeByPhoneNumber(db, "+15551234567");
+  expect(result).toBeNull();
 });
 
 test("createEmployee inserts and returns employee", async () => {

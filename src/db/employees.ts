@@ -32,6 +32,18 @@ export async function getEmployeeByEmail(
   return r ?? null;
 }
 
+export async function getEmployeeByPhoneNumber(
+  db: AnyDB,
+  phoneNumber: string,
+): Promise<EmployeeEntity | null> {
+  const [r] = await db
+    .select()
+    .from(employees)
+    .where(and(eq(employees.phoneNumber, phoneNumber), isNull(employees.deletedAt)))
+    .limit(1);
+  return r ?? null;
+}
+
 export type CreateEmployeeInput = {
   id: string;
   employeeNumber: string;
