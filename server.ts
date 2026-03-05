@@ -30,6 +30,16 @@ new Elysia()
           description: "Intracore internal API",
           version: "1.0.0",
         },
+        components: {
+          securitySchemes: {
+            bearerAuth: {
+              type: "http",
+              scheme: "bearer",
+              bearerFormat: "Token",
+              description: "Session token from POST /v1/identity/token",
+            },
+          },
+        },
       },
     }),
   )

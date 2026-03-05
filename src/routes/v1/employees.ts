@@ -33,8 +33,10 @@ const updateEmployeeBody = t.Object({
   preferredLanguage: t.Optional(t.String()),
 });
 
+const bearerSecurity = { security: [{ bearerAuth: [] as const }] } as const;
+
 export function employeesRouter(db: AnyDB) {
-  return new Elysia({ prefix: "/v1/employees" })
+  return new Elysia({ prefix: "/v1/employees", detail: bearerSecurity })
     .onError(({ code, error: handlerError }) => {
       if (code === "VALIDATION")
         return new Response((handlerError as Error).message, {

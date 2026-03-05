@@ -61,7 +61,10 @@ function extractGitHubToken(request: Request, body?: { githubToken?: string }): 
 }
 
 export function identityRouter(db: AnyDB) {
+  const bearerSecurity = { security: [{ bearerAuth: [] as const }] } as const;
+
   const authGuard = {
+    detail: bearerSecurity,
     async beforeHandle({ request }: { request: Request }) {
       const auth = request.headers.get("Authorization");
       if (!auth?.startsWith("Bearer ")) {

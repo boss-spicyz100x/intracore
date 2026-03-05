@@ -30,8 +30,10 @@ const updateCompanyBody = t.Object({
   description: t.Optional(t.String()),
 });
 
+const bearerSecurity = { security: [{ bearerAuth: [] as const }] } as const;
+
 export function companiesRouter(db: AnyDB) {
-  return new Elysia({ prefix: "/v1/companies" })
+  return new Elysia({ prefix: "/v1/companies", detail: bearerSecurity })
     .onError(({ code, error: handlerError }) => {
       if (code === "VALIDATION")
         return new Response((handlerError as Error).message, {

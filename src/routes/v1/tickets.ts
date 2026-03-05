@@ -51,8 +51,10 @@ const updateTicketBody = t.Object({
   assigneeId: t.Optional(t.Union([t.String({ format: "uuid" }), t.Null()])),
 });
 
+const bearerSecurity = { security: [{ bearerAuth: [] as const }] } as const;
+
 export function ticketsRouter(db: AnyDB) {
-  return new Elysia({ prefix: "/v1/tickets" })
+  return new Elysia({ prefix: "/v1/tickets", detail: bearerSecurity })
     .onError(({ code, error: handlerError }) => {
       if (code === "VALIDATION")
         return new Response((handlerError as Error).message, {
