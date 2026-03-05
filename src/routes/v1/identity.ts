@@ -19,9 +19,16 @@ import {
   updateWhitelist,
   deleteWhitelist,
 } from "../../db/whitelist";
-import { createSession, listSessions, getSessionById, revokeSession } from "../../auth/sessions";
-import { authPlugin } from "../../auth/middleware";
+import {
+  createSession,
+  listSessions,
+  getSessionById,
+  revokeSession,
+  validateSession,
+} from "../../auth/sessions";
 import { whitelists } from "../../db/schema.postgres";
+
+const UNAUTHORIZED = { error: "Unauthorized", message: "Invalid or expired token" };
 
 const verifyBody = t.Object({
   phoneNumber: t.String({ minLength: 1 }),
@@ -54,8 +61,88 @@ function extractGitHubToken(request: Request, body?: { githubToken?: string }): 
 }
 
 export function identityRouter(db: AnyDB) {
+  const authGuard = {
+    async beforeHandle({ request }: { request: Request }) {
+      const auth = request.headers.get("Authorization");
+      if (!auth?.startsWith("Bearer ")) {
+        return new Response(JSON.stringify(UNAUTHORIZED), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const token = auth.slice(7).trim();
+      if (!token) {
+        return new Response(JSON.stringify(UNAUTHORIZED), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const session = await validateSession(db, token);
+      if (!session) {
+        return new Response(JSON.stringify(UNAUTHORIZED), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    },
+    async derive({ request }: { request: Request }) {
+      const auth = request.headers.get("Authorization");
+      if (!auth?.startsWith("Bearer "))
+        return { session: null as { id: string; email: string } | null };
+      const token = auth.slice(7).trim();
+      const session = await validateSession(db, token);
+      return { session };
+    },
+  };
+
   const protectedRoutes = new Elysia()
-    .use(authPlugin(db))
+    .guard(authGuard)
+    .post(
+      "/verify",
+      async ({ body, set }) => {
+        const [r] = await db
+          .select({
+            id: employees.id,
+            fullName: employees.fullName,
+            email: employees.email,
+            preferredLanguage: employees.preferredLanguage,
+          })
+          .from(employees)
+          .where(
+            and(
+              eq(employees.phoneNumber, body.phoneNumber),
+              eq(employees.email, body.email),
+              eq(employees.employeeNumber, body.employeeNumber),
+              isNull(employees.deletedAt),
+            ),
+          )
+          .limit(1);
+
+        if (!r) {
+          set.status = 401;
+          return {
+            error: "Unauthorized",
+            message: "Identity verification failed",
+          };
+        }
+
+        return {
+          id: r.id,
+          fullName: r.fullName,
+          email: r.email,
+          preferredLanguage: r.preferredLanguage,
+        };
+      },
+      {
+        body: verifyBody,
+        detail: { summary: "Verify employee identity", tags: ["identity"] },
+        response: {
+          200: identityResponseSchema,
+          400: validationErrorSchema,
+          401: errorResponseSchema,
+        },
+      },
+    )
     .get(
       "/whitelists",
       async () => {
@@ -229,52 +316,6 @@ export function identityRouter(db: AnyDB) {
           200: authTokenResponseSchema,
           401: errorResponseSchema,
           403: errorResponseSchema,
-        },
-      },
-    )
-    .post(
-      "/verify",
-      async ({ body, set }) => {
-        const [r] = await db
-          .select({
-            id: employees.id,
-            fullName: employees.fullName,
-            email: employees.email,
-            preferredLanguage: employees.preferredLanguage,
-          })
-          .from(employees)
-          .where(
-            and(
-              eq(employees.phoneNumber, body.phoneNumber),
-              eq(employees.email, body.email),
-              eq(employees.employeeNumber, body.employeeNumber),
-              isNull(employees.deletedAt),
-            ),
-          )
-          .limit(1);
-
-        if (!r) {
-          set.status = 401;
-          return {
-            error: "Unauthorized",
-            message: "Identity verification failed",
-          };
-        }
-
-        return {
-          id: r.id,
-          fullName: r.fullName,
-          email: r.email,
-          preferredLanguage: r.preferredLanguage,
-        };
-      },
-      {
-        body: verifyBody,
-        detail: { summary: "Verify employee identity", tags: ["identity"] },
-        response: {
-          200: identityResponseSchema,
-          400: validationErrorSchema,
-          401: errorResponseSchema,
         },
       },
     )

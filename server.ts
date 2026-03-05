@@ -36,10 +36,12 @@ new Elysia()
   .get("/", healthResponse, { response: { 200: t.Any() } })
   .get("/health", healthResponse, { response: { 200: t.Any() } })
   .use(identityRouter(db as any))
-  .use(authPlugin(db as any))
-  .use(ticketsRouter(db as any))
-  .use(companiesRouter(db as any))
-  .use(employeesRouter(db as any))
+  .use(
+    authPlugin(db as any)
+      .use(ticketsRouter(db as any))
+      .use(companiesRouter(db as any))
+      .use(employeesRouter(db as any)),
+  )
   .listen(port, () => {
     logger.info({ port: Number(port) }, "Server listening");
   });
