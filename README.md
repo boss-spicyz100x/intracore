@@ -99,9 +99,9 @@ bun run start
 
 Cognigy xApps for visual interaction:
 
-- **verification.html** — Collects phone, email, employee number for ID&V
-- **ticket-list.html** — Displays ticket history
-- **ticket-detail.html** — Full ticket details
+- **[verification.html](https://github.com/boss-spicyz100x/intracore/blob/main/xapps/verification.html)** — Collects phone, email, employee number for ID&V
+- **[ticket-list.html](https://github.com/boss-spicyz100x/intracore/blob/main/xapps/ticket-list.html)** — Displays ticket history
+- **[ticket-detail.html](https://github.com/boss-spicyz100x/intracore/blob/main/xapps/ticket-detail.html)** — Full ticket details
 
 ## Docker
 
