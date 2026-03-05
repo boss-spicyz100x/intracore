@@ -424,7 +424,7 @@ Interactive API documentation: \url{https://intracore.eden.spicyz.io/docs}
 {
   "phoneNumber": "+1234567890",
   "email": "user@example.com",
-  "employeeNumber": "12345"
+  "employeeNumber": "007"
 }
 \end{lstlisting}
 
@@ -457,7 +457,7 @@ Three xApps are provided, built with the Cognigy app-page SDK and Material Web:
 
 \begin{itemize}[noitemsep]
   \item \textbf{verification.html} --- Collects phone number, email, employee number; submits via \texttt{SDK.submit(\{phoneNumber, email, employeeNumber\})}
-  \item \textbf{ticket-list.html} --- Displays ticket history with status/priority badges; supports en, th, ja, de
+  \item \textbf{ticket-list.html} --- Displays ticket history with status/priority badges; supports English, Thai, Japanese, German
   \item \textbf{ticket-detail.html} --- Shows full ticket details (status, priority, category, description, company, reporter, assignee, dates)
 \end{itemize}
 
@@ -499,8 +499,7 @@ GitHub Actions workflow \texttt{.github/workflows/docker-publish.yml}:
 
 \begin{itemize}[noitemsep]
   \item Triggers on push to \texttt{main}
-  \item Logs in to \texttt{ghcr.io}
-  \item Builds and pushes image to \texttt{ghcr.io/boss-spicyz100x/intracore:latest} and \texttt{ghcr.io/boss-spicyz100x/intracore:<sha>}
+  \item Builds and pushes Docker image
 \end{itemize}
 
 \section{Security}
@@ -508,7 +507,7 @@ GitHub Actions workflow \texttt{.github/workflows/docker-publish.yml}:
 \begin{itemize}[noitemsep]
   \item \textbf{Token hashing:} Session tokens are hashed (SHA-256) before storage; only the hash is stored
   \item \textbf{Whitelist:} Only whitelisted emails can obtain session tokens
-  \item \textbf{HTTPS:} Production deployments should use HTTPS (handled by ingress/load balancer)
+  \item \textbf{HTTPS:} TLS termination at Cloudflare
 \end{itemize}
 
 \section{Deliverables Summary}
@@ -517,7 +516,7 @@ GitHub Actions workflow \texttt{.github/workflows/docker-publish.yml}:
   \item Cognigy platform flow design (voice agent, xApps)
   \item IntraCore API integration for ID\&V and ticketing
   \item xApp (verification, ticket-list, ticket-detail)
-  \item Multilingual support (en, th, ja, de)
+  \item Multilingual support (English, Thai, Japanese, German)
   \item Presentations and documentation for Capstone Sprint evaluation
 \end{itemize}
 
