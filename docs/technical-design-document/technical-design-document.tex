@@ -86,14 +86,23 @@ The implemented scope includes:
 
 \section{Technology Stack}
 
-\begin{itemize}[noitemsep]
-  \item \textbf{Runtime:} \href{https://bun.com}{Bun}
-  \item \textbf{Web Framework:} \href{https://elysiajs.com}{Elysia}
-  \item \textbf{ORM:} \href{https://orm.drizzle.team}{Drizzle}
-  \item \textbf{Database:} \href{https://postgresql.org}{Postgres}
-  \item \textbf{Logging:} \href{https://github.com/pinojs/pino}{Pino}
-  \item \textbf{xApp UI:} \href{https://github.com/material-components/material-web}{Material Web} (md-* components)
-\end{itemize}
+The system is built with the following technologies:
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \textbf{Category} & \textbf{Technology} \\
+    \midrule
+    Runtime & \href{https://bun.com}{Bun} \\
+    Web Framework & \href{https://elysiajs.com}{Elysia} (v1.4) \\
+    ORM & \href{https://orm.drizzle.team}{Drizzle} (v0.45) \\
+    Database & \href{https://postgresql.org}{Postgres} \\
+    Logging & \href{https://github.com/pinojs/pino}{Pino} (v10) \\
+    xApp UI & \href{https://github.com/material-components/material-web}{Material Web} (md-outlined-text-field, md-filled-button, md-outlined-select) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \clearpage
 \section{System Overview}
@@ -110,6 +119,7 @@ The system follows a three-tier architecture:
 \subsection{Flow}
 \begin{enumerate}[noitemsep]
   \item User connects via WebRTC or dial-in
+  \item Language selection: Press 1 for English, 2 for Thai, 3 for Japanese, 4 for German
   \item Cognigy authenticates via GitHub OAuth $\rightarrow$ POST /v1/auth/token
   \item Cognigy calls POST /v1/auth/verify with phone, email, employee number for ID\&V
   \item Cognigy calls IntraCore API (create, list, update, close, history) with Bearer token
