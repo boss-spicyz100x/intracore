@@ -7,6 +7,7 @@
 \usepackage{booktabs}
 \usepackage{longtable}
 \usepackage{enumitem}
+\usepackage{float}
 \usepackage{tikz}
 \usepackage{pgf-umlsd}
 \usepgflibrary{arrows}
@@ -105,7 +106,7 @@ The system follows a three-tier architecture:
 The following diagrams depict the flow (user connects via a public phone number or WebRTC).
 
 \subsubsection{Authentication Flow}
-\begin{figure}[htbp]
+\begin{figure}[H]
   \centering
   \begin{sequencediagram}
     \newthread{user}{User}
@@ -128,7 +129,7 @@ The following diagrams depict the flow (user connects via a public phone number 
 \end{figure}
 
 \subsubsection{Identity and Verification Flow}
-\begin{figure}[htbp]
+\begin{figure}[H]
   \centering
   \begin{sequencediagram}
     \newthread{user}{User}
@@ -155,29 +156,29 @@ The following diagrams depict the flow (user connects via a public phone number 
 \end{figure}
 
 \subsubsection{Ticket Creation Flow}
-\begin{figure}[htbp]
+\begin{figure}[H]
   \centering
   \begin{sequencediagram}
     \newthread{user}{User}
-    \newinst{agent}{Cognigy}
+    \newthread{agent}{Cognigy}
     \newinst{api}{IntraCore API}
     \newinst{db}{Database}
-    \begin{call}[1]{user}{Create ticket}{agent}{ticket}
-      \begin{call}[1]{agent}{Prompt: describe issue}{user}{OK}
+    \begin{call}[1]{agent}{Asking for problem}{user}{Describe problem}
+    \end{call}
+    \begin{call}[2]{agent}{POST /v1/tickets}{api}{ticket}
+      \begin{call}[1]{api}{Validate company, reporter}{db}{OK}
       \end{call}
-      \begin{call}[2]{agent}{POST /v1/tickets}{api}{ticket}
-        \begin{call}[1]{api}{Validate company, reporter}{db}{OK}
-        \end{call}
-        \begin{call}[1]{api}{Count tickets}{db}{count}
-        \end{call}
-        \begin{call}[1]{api}{Insert ticket}{db}{OK}
-        \end{call}
+      \begin{call}[1]{api}{Count tickets}{db}{count}
+      \end{call}
+      \begin{call}[1]{api}{Insert ticket}{db}{OK}
       \end{call}
     \end{call}
+    \mess{agent}{ticketNumber}{user}
   \end{sequencediagram}
-  \caption{Ticket creation: User requests ticket creation; Cognigy prompts for issue description; API validates and inserts ticket; Cognigy returns ticket to user.}
+  \caption{Ticket creation: User (authenticated) requests ticket creation; Cognigy asks for the problem; user describes the problem; Cognigy calls POST /v1/tickets; API validates and inserts ticket; Cognigy returns ticket to user.}
 \end{figure}
 
+\clearpage
 \section{Technology Stack}
 
 \begin{itemize}[noitemsep]
