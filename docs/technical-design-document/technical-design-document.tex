@@ -33,7 +33,10 @@
 \large Voice Assistant for IT Ticketing and Identity Verification\\
 \large Version 1.0.0\\
 \large March 5, 2026}
-\author{}
+\author{
+  Nutchanon Phongoen (earth@100x.fi)\\
+  Supachai Kheawjuy (boss.spicyz@100x.fi)
+}
 \date{}
 
 \begin{document}
@@ -41,7 +44,7 @@
 \maketitle
 
 \begin{abstract}
-This document describes the technical design of a voice assistant for IT ticketing and identity verification, built for IntraCore Solutions as a Cognigy Capstone project. The system combines Cognigy.AI conversational AI with xApps for visual interaction, backed by a REST API that integrates with PostgreSQL for persistent data. Users can verify their identity via voice (ANI/phone, email, employee number), manage internal support tickets, and access FAQ content through WebRTC or dial-in voice channels in multiple languages.
+This document describes the technical design of a voice assistant for IT ticketing and identity verification, built for IntraCore Solutions as a Cognigy Capstone Sprint project. The system combines Cognigy.AI conversational AI with xApps for visual interaction, backed by an IntraCore API that integrates with Postgres for persistent data. Users can verify their identity via voice (ANI/phone, email, employee number), manage internal support tickets, and access FAQ content through WebRTC or dial-in voice channels in multiple languages.
 \end{abstract}
 
 \tableofcontents
@@ -50,13 +53,13 @@ This document describes the technical design of a voice assistant for IT ticketi
 \section{Introduction}
 
 \subsection{Purpose}
-This Technical Design Document (TDD) provides a structured walkthrough of the Cognigy Capstone solution for IntraCore Solutions. It serves as the primary reference for understanding the architecture, APIs, data model, and deployment of the voice assistant system.
+This Technical Design Document (TDD) provides a structured walkthrough of the Cognigy Capstone Sprint solution for IntraCore Solutions. It serves as the primary reference for understanding the architecture, APIs, data model, and deployment of the voice assistant system.
 
 \subsection{Scope}
-The document covers the full technical implementation: REST API backend, Cognigy voice agent integration, xApp interfaces, identity verification, ticketing workflows, and deployment infrastructure.
+The document covers the full technical implementation: IntraCore API backend, Cognigy platform integration, xApp interfaces, identity verification, ticketing workflows, and deployment infrastructure.
 
 \subsection{Audience}
-This document is intended for capstone evaluators, customer stakeholders, and technical team members who need to understand or extend the system.
+This document is intended for Capstone Sprint evaluators, customer stakeholders, and technical team members who need to understand or extend the system.
 
 \section{Business Context}
 
@@ -69,7 +72,7 @@ IntraCore Solutions is a fictional mid-sized technology firm with distributed te
   \item Reduce load on human agents for routine tasks
 \end{itemize}
 
-\section{Capstone Scope}
+\section{Capstone Sprint Scope}
 
 The implemented scope includes:
 
@@ -87,18 +90,18 @@ The implemented scope includes:
 The system follows a three-tier architecture:
 
 \begin{enumerate}[noitemsep]
-  \item \textbf{Cognigy Voice Agent} --- Handles speech recognition, NLU, and dialog management; invokes REST API for backend operations
-  \item \textbf{REST API} --- Elysia-based backend on Bun; validates requests, enforces auth, and performs business logic
-  \item \textbf{PostgreSQL} --- Persistent storage for companies, employees, tickets, sessions, and whitelists
+  \item \textbf{Cognigy platform} --- Full Cognigy.AI platform (voice agent, NLU, dialog management, Cognigy xApp); invokes IntraCore API for backend operations
+  \item \textbf{IntraCore API} --- Elysia-based backend on Bun; validates requests, enforces auth, and performs business logic
+  \item \textbf{Database (Postgres)} --- Persistent storage for companies, employees, tickets, sessions, and whitelists
 \end{enumerate}
 
 \subsection{Flow}
 \begin{enumerate}[noitemsep]
   \item User connects via WebRTC or dial-in
-  \item Cognigy agent authenticates via GitHub OAuth $\rightarrow$ POST /v1/auth/token
-  \item Agent calls POST /v1/auth/verify with phone, email, employee number for ID\&V
-  \item Agent calls ticket APIs (create, list, update, close, history) with Bearer token
-  \item xApps (verification, ticket-list, ticket-detail) are shown in Cognigy when needed; they use the app-page SDK to submit data back to the agent
+  \item Cognigy authenticates via GitHub OAuth $\rightarrow$ POST /v1/auth/token
+  \item Cognigy calls POST /v1/auth/verify with phone, email, employee number for ID\&V
+  \item Cognigy calls IntraCore API (create, list, update, close, history) with Bearer token
+  \item Cognigy xApps (verification, ticket-list, ticket-detail) are shown when needed; they use the app-page SDK to submit data back to Cognigy
 \end{enumerate}
 
 \subsection{Sequence Diagrams}
@@ -178,16 +181,122 @@ The following diagrams depict the flow (user connects via a public phone number 
   \caption{Ticket creation: User (authenticated) requests ticket creation; Cognigy asks for the problem; user describes the problem; Cognigy calls POST /v1/tickets; API validates and inserts ticket; Cognigy returns ticket to user.}
 \end{figure}
 
+\subsubsection{Ticket Retrieval with xApp}
+\begin{figure}[H]
+  \centering
+  \begin{sequencediagram}
+    \newthread{user}{User}
+    \newinst{xapp}{xApp}
+    \newthread{agent}{Cognigy}
+    \newinst{api}{IntraCore API}
+    \newinst{db}{Database}
+    \begin{call}[1]{user}{Check ticket status}{agent}{ticket}
+      \begin{call}[1]{agent}{Ask ticket number}{user}{ticketNumber}
+      \end{call}
+      \begin{call}[2]{agent}{GET /v1/tickets/number/:ticketNumber}{api}{ticket}
+        \begin{call}[1]{api}{Select ticket}{db}{ticket}
+        \end{call}
+      \end{call}
+      \mess{agent}{Email xApp link}{user}
+      \begin{call}[1]{user}{Open link}{xapp}{}
+      \end{call}
+    \end{call}
+  \end{sequencediagram}
+  \caption{Ticket retrieval: User requests ticket status; Cognigy asks for ticket number; user provides it; Cognigy fetches ticket via API; Cognigy emails xApp link; user opens link to view ticket details in xApp.}
+\end{figure}
+
+\subsubsection{Ticket Update Flow}
+\begin{figure}[H]
+  \centering
+  \begin{sequencediagram}
+    \newthread{user}{User}
+    \newthread{agent}{Cognigy}
+    \newinst{api}{IntraCore API}
+    \newinst{db}{Database}
+    \begin{call}[1]{user}{Update ticket}{agent}{OK}
+      \begin{call}[1]{agent}{Ask ticket number, changes}{user}{ticketNumber, updates}
+      \end{call}
+      \begin{call}[2]{agent}{PUT /v1/tickets/number/:ticketNumber}{api}{ticket}
+        \begin{call}[1]{api}{Update ticket}{db}{OK}
+        \end{call}
+      \end{call}
+    \end{call}
+  \end{sequencediagram}
+  \caption{Ticket update: User requests ticket update; Cognigy asks for ticket number and changes; user provides; Cognigy calls PUT; API updates ticket in database; Cognigy confirms to user.}
+\end{figure}
+
+\subsubsection{Close Ticket Flow}
+\begin{figure}[H]
+  \centering
+  \begin{sequencediagram}
+    \newthread{user}{User}
+    \newthread{agent}{Cognigy}
+    \newinst{api}{IntraCore API}
+    \newinst{db}{Database}
+    \begin{call}[1]{user}{Close ticket}{agent}{OK}
+      \begin{call}[1]{agent}{Ask ticket number}{user}{ticketNumber}
+      \end{call}
+      \begin{call}[2]{agent}{DELETE /v1/tickets/number/:ticketNumber}{api}{OK}
+        \begin{call}[1]{api}{Update status to CLOSED}{db}{OK}
+        \end{call}
+      \end{call}
+    \end{call}
+  \end{sequencediagram}
+  \caption{Close ticket: User requests to close ticket; Cognigy asks for ticket number; user provides; Cognigy calls DELETE; API sets status to CLOSED; Cognigy confirms to user.}
+\end{figure}
+
+\subsubsection{List Ticket Histories with xApp}
+\begin{figure}[H]
+  \centering
+  \begin{sequencediagram}
+    \newthread{user}{User}
+    \newinst{xapp}{xApp}
+    \newthread{agent}{Cognigy}
+    \newinst{api}{IntraCore API}
+    \newinst{db}{Database}
+    \begin{call}[1]{user}{List my tickets}{agent}{tickets}
+      \begin{call}[2]{agent}{GET /v1/tickets/history?employeeId=}{api}{tickets}
+        \begin{call}[1]{api}{Select tickets}{db}{tickets}
+        \end{call}
+      \end{call}
+      \mess{agent}{Email xApp link}{user}
+      \begin{call}[1]{user}{Open link}{xapp}{}
+      \end{call}
+    \end{call}
+  \end{sequencediagram}
+  \caption{Ticket history: User requests ticket list; Cognigy calls GET /v1/tickets/history with employeeId from verification; API returns tickets; Cognigy emails xApp link; user opens link to view ticket list in xApp.}
+\end{figure}
+
+\subsubsection{Escalate Ticket Flow}
+\begin{figure}[H]
+  \centering
+  \begin{sequencediagram}
+    \newthread{user}{User}
+    \newthread{agent}{Cognigy}
+    \newinst{api}{IntraCore API}
+    \newinst{db}{Database}
+    \begin{call}[1]{user}{Escalate ticket}{agent}{OK}
+      \begin{call}[1]{agent}{Ask ticket number}{user}{ticketNumber}
+      \end{call}
+      \begin{call}[2]{agent}{PUT /v1/tickets/number/:ticketNumber (priority=HIGH)}{api}{ticket}
+        \begin{call}[1]{api}{Update priority}{db}{OK}
+        \end{call}
+      \end{call}
+    \end{call}
+  \end{sequencediagram}
+  \caption{Escalate ticket: User requests escalation; Cognigy asks for ticket number; user provides; Cognigy calls PUT with priority HIGH; API updates ticket; Cognigy confirms to user.}
+\end{figure}
+
 \clearpage
 \section{Technology Stack}
 
 \begin{itemize}[noitemsep]
-  \item \textbf{Runtime:} Bun
-  \item \textbf{Web Framework:} Elysia
-  \item \textbf{ORM:} Drizzle
-  \item \textbf{Database:} PostgreSQL
-  \item \textbf{Logging:} Pino
-  \item \textbf{xApp UI:} Material Web (md-* components)
+  \item \textbf{Runtime:} \href{https://bun.com}{Bun}
+  \item \textbf{Web Framework:} \href{https://elysiajs.com}{Elysia}
+  \item \textbf{ORM:} \href{https://orm.drizzle.team}{Drizzle}
+  \item \textbf{Database:} \href{https://postgresql.org}{Postgres}
+  \item \textbf{Logging:} \href{https://github.com/pinojs/pino}{Pino}
+  \item \textbf{xApp UI:} \href{https://github.com/material-components/material-web}{Material Web} (md-* components)
 \end{itemize}
 
 \section{Data Model}
@@ -305,7 +414,7 @@ Search history & GET /v1/tickets/history?employeeId= \\
 \end{longtable}
 
 \subsection{OpenAPI}
-Interactive API documentation is available at \texttt{/docs}.
+Interactive API documentation: \url{https://intracore.eden.spicyz.io/docs}
 
 \section{Identity and Verification}
 
@@ -379,7 +488,7 @@ CMD ["/app/intracore"]
 
 \subsection{Environment}
 \begin{itemize}[noitemsep]
-  \item \texttt{DATABASE\_URL} --- PostgreSQL connection string
+  \item \texttt{DATABASE\_URL} --- Postgres connection string
   \item \texttt{PORT} --- Server port (default 3000)
 \end{itemize}
 
@@ -404,11 +513,11 @@ GitHub Actions workflow \texttt{.github/workflows/docker-publish.yml}:
 \section{Deliverables Summary}
 
 \begin{itemize}[noitemsep]
-  \item Voice agent with Cognigy flow design
-  \item REST API integration for ID\&V and ticketing
+  \item Cognigy platform flow design (voice agent, xApps)
+  \item IntraCore API integration for ID\&V and ticketing
   \item xApp (verification, ticket-list, ticket-detail)
   \item Multilingual support (en, th, ja, de)
-  \item Presentations and documentation for capstone evaluation
+  \item Presentations and documentation for Capstone Sprint evaluation
 \end{itemize}
 
 \end{document}
