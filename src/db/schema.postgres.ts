@@ -63,3 +63,17 @@ export const tickets = pgTable("tickets", {
   updatedAt: text("updated_at").notNull(),
   closedAt: text("closed_at"),
 });
+
+export const sessions = pgTable("sessions", {
+  id: text("id").primaryKey(),
+  tokenHash: text("token_hash").notNull().unique(),
+  email: text("email").notNull(),
+  expiresAt: text("expires_at").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+export const whitelists = pgTable("whitelists", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  createdAt: text("created_at").notNull(),
+});

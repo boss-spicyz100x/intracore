@@ -1,5 +1,6 @@
+import { v7 as uuidv7 } from "uuid";
 import { drizzle } from "drizzle-orm/bun-sql";
-import { companies, employees } from "./schema.postgres";
+import { companies, employees, whitelists } from "./schema.postgres";
 
 const COMPANY_ID = "019cb6f6-0779-70b0-8476-587694f7e6aa";
 const EMP_001_ID = "019cb6f6-077b-752d-a4d9-62f15e5e5240";
@@ -9,7 +10,7 @@ const EMP_004_ID = "019cb6f6-077b-752d-a4d9-6ec2aa1e43c5";
 
 const db = drizzle({
   connection: process.env.DATABASE_URL!,
-  schema: { companies, employees },
+  schema: { companies, employees, whitelists },
 } as any);
 
 const now = new Date().toISOString();
@@ -86,6 +87,14 @@ await db
       updatedAt: now,
       deletedAt: null,
     },
+  ])
+  .onConflictDoNothing();
+
+await db
+  .insert(whitelists)
+  .values([
+    { id: uuidv7(), email: "earth@100x.fi", createdAt: now },
+    { id: uuidv7(), email: "boss.spicyz@100x.fi", createdAt: now },
   ])
   .onConflictDoNothing();
 

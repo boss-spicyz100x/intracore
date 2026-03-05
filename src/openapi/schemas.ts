@@ -19,3 +19,22 @@ export const identityResponseSchema = t.Object({
   email: t.String({ format: "email" }),
   preferredLanguage: t.String(),
 });
+
+export const authTokenResponseSchema = t.Object({
+  accessToken: t.String(),
+  expiresAt: t.String(),
+  tokenType: t.Literal("Bearer"),
+});
+
+export const whitelistSchema = t.Object({
+  id: t.String({ format: "uuid" }),
+  email: t.String({ format: "email" }),
+  createdAt: t.String(),
+});
+
+export const sessionSchema = t.Object({
+  id: t.String({ format: "uuid" }),
+  email: t.String({ format: "email" }),
+  expiresAt: t.String(),
+  createdAt: t.String(),
+});

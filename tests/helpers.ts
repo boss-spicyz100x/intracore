@@ -2,12 +2,13 @@ import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { v7 as uuidv7 } from "uuid";
 import { Elysia } from "elysia";
-import { companies, employees } from "../src/db/schema.postgres";
+import { companies, employees, whitelists } from "../src/db/schema.postgres";
 import type { AnyDB } from "../src/db/tickets";
 import { ticketsRouter } from "../src/routes/v1/tickets";
 import { companiesRouter } from "../src/routes/v1/companies";
 import { employeesRouter } from "../src/routes/v1/employees";
 import { identityRouter } from "../src/routes/v1/identity";
+import { authPlugin } from "../src/auth/middleware";
 
 function initSchema(sqlite: Database) {
   sqlite.run(`CREATE TABLE companies (
@@ -49,6 +50,18 @@ function initSchema(sqlite: Database) {
     updated_at TEXT NOT NULL,
     closed_at TEXT
   )`);
+  sqlite.run(`CREATE TABLE whitelists (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL
+  )`);
+  sqlite.run(`CREATE TABLE sessions (
+    id TEXT PRIMARY KEY,
+    token_hash TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )`);
 }
 
 export function createTestDb(): AnyDB {
@@ -69,6 +82,55 @@ export function createTestApp(db: AnyDB) {
     .use(companiesRouter(db))
     .use(employeesRouter(db))
     .use(identityRouter(db));
+}
+
+export async function createTestAppWithAuth(db: AnyDB, mockGitHubUser?: { email: string }) {
+  const email = mockGitHubUser?.email ?? "earth@100x.fi";
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : (input as Request).url;
+    if (url.includes("api.github.com/user") && !url.includes("/emails")) {
+      return new Response(JSON.stringify({ email }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    if (url.includes("api.github.com/user/emails")) {
+      return new Response(JSON.stringify([{ email, primary: true }]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return originalFetch(input as RequestInfo, init);
+  }) as typeof fetch;
+
+  const now = new Date().toISOString();
+  await (db as any).insert(whitelists).values([
+    { id: uuidv7(), email: "earth@100x.fi", createdAt: now },
+    { id: uuidv7(), email: "boss.spicyz@100x.fi", createdAt: now },
+  ]);
+
+  const healthResponse = () => ({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+  });
+
+  const app = new Elysia()
+    .get("/", healthResponse)
+    .get("/health", healthResponse)
+    .use(identityRouter(db))
+    .use(authPlugin(db).use(ticketsRouter(db)).use(companiesRouter(db)).use(employeesRouter(db)));
+
+  (app as any).restoreFetch = () => {
+    globalThis.fetch = originalFetch;
+  };
+
+  return app;
 }
 
 export async function seedCompanyAndEmployees(db: AnyDB) {
