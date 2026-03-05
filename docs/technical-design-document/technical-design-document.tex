@@ -430,9 +430,9 @@ The following diagrams depict the flow (user connects via a public phone number 
     };
 
     \draw[one to many] (companies.south) -- node[left, font=\scriptsize] {company\_id} (employees.north);
-    \draw[one to many] (companies.south) to[bend left=25] node[above, pos=0.5, font=\scriptsize] {company\_id} (tickets.north);
-    \draw[one to many] (employees.east) -- node[above, font=\scriptsize] {reported\_by\_id} (tickets.west);
-    \draw[one to omany] (employees.east) to[bend right=15] node[below, pos=0.5, font=\scriptsize] {assignee\_id} (tickets.west);
+    \draw[one to many] (companies.east) to[bend left=25] node[above, pos=0.5, font=\scriptsize] {company\_id} (tickets.north);
+    \draw[one to many] (employees.east) to[bend left=10] node[above, pos=0.5, font=\scriptsize] {reported\_by\_id} (tickets.west);
+    \draw[one to omany] (employees.south) to[bend right=15] node[below, pos=0.5, font=\scriptsize] {assignee\_id} (tickets.south);
   \end{tikzpicture}
   \caption{Database entity relationship diagram (crow's foot notation). companies and employees are core entities; tickets references both. sessions and whitelists are standalone (auth).}
 \end{figure}
