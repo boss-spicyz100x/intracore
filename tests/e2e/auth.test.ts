@@ -1,9 +1,14 @@
 import { test, expect } from "bun:test";
-import { createTestDb, createTestAppWithAuth } from "../helpers";
+import {
+  createTestDb,
+  createTestAppWithAuth,
+  seedCompanyAndEmployees,
+  seedEmployee,
+} from "../helpers";
 
 async function getAccessToken(app: Awaited<ReturnType<typeof createTestAppWithAuth>>) {
   const res = await app.handle(
-    new Request("http://localhost/v1/identity/token", {
+    new Request("http://localhost/v1/auth/token", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -17,11 +22,11 @@ async function getAccessToken(app: Awaited<ReturnType<typeof createTestAppWithAu
   return body.accessToken;
 }
 
-test("POST /v1/identity/token with valid GitHub token + whitelisted email → 200, returns accessToken and expiresAt", async () => {
+test("POST /v1/auth/token with valid GitHub token + whitelisted email → 200, returns accessToken and expiresAt", async () => {
   const db = createTestDb();
   const app = await createTestAppWithAuth(db);
   const res = await app.handle(
-    new Request("http://localhost/v1/identity/token", {
+    new Request("http://localhost/v1/auth/token", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -38,11 +43,11 @@ test("POST /v1/identity/token with valid GitHub token + whitelisted email → 20
   expect(typeof body.expiresAt).toBe("string");
 });
 
-test("POST /v1/identity/token with valid GitHub token but non-whitelisted email → 403", async () => {
+test("POST /v1/auth/token with valid GitHub token but non-whitelisted email → 403", async () => {
   const db = createTestDb();
   const app = await createTestAppWithAuth(db, { email: "nonseeded@example.com" });
   const res = await app.handle(
-    new Request("http://localhost/v1/identity/token", {
+    new Request("http://localhost/v1/auth/token", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -57,7 +62,7 @@ test("POST /v1/identity/token with valid GitHub token but non-whitelisted email 
   expect(body.message).toContain("whitelist");
 });
 
-test("POST /v1/identity/token with invalid GitHub token → 401", async () => {
+test("POST /v1/auth/token with invalid GitHub token → 401", async () => {
   const db = createTestDb();
   const app = await createTestAppWithAuth(db);
   const prevFetch = globalThis.fetch;
@@ -78,7 +83,7 @@ test("POST /v1/identity/token with invalid GitHub token → 401", async () => {
   }) as typeof fetch;
   try {
     const res = await app.handle(
-      new Request("http://localhost/v1/identity/token", {
+      new Request("http://localhost/v1/auth/token", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -119,12 +124,12 @@ test("GET /v1/tickets with valid Bearer token → 200 (list tickets)", async () 
   expect(Array.isArray(body)).toBe(true);
 });
 
-test("GET /v1/identity/whitelists with valid token → 200, returns array", async () => {
+test("GET /v1/whitelists with valid token → 200, returns array", async () => {
   const db = createTestDb();
   const app = await createTestAppWithAuth(db);
   const accessToken = await getAccessToken(app);
   const res = await app.handle(
-    new Request("http://localhost/v1/identity/whitelists", {
+    new Request("http://localhost/v1/whitelists", {
       headers: { Authorization: `Bearer ${accessToken}` },
     }),
   );
@@ -137,12 +142,12 @@ test("GET /v1/identity/whitelists with valid token → 200, returns array", asyn
   expect(emails).toContain("boss.spicyz@100x.fi");
 });
 
-test("POST /v1/identity/whitelists with valid token + { email } → 200", async () => {
+test("POST /v1/whitelists with valid token + { email } → 200", async () => {
   const db = createTestDb();
   const app = await createTestAppWithAuth(db);
   const accessToken = await getAccessToken(app);
   const res = await app.handle(
-    new Request("http://localhost/v1/identity/whitelists", {
+    new Request("http://localhost/v1/whitelists", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -157,12 +162,12 @@ test("POST /v1/identity/whitelists with valid token + { email } → 200", async 
   expect(body.id).toBeDefined();
 });
 
-test("DELETE /v1/identity/sessions/:id with valid token → 200", async () => {
+test("DELETE /v1/sessions/:id with valid token → 200", async () => {
   const db = createTestDb();
   const app = await createTestAppWithAuth(db);
   const accessToken = await getAccessToken(app);
   const sessionsRes = await app.handle(
-    new Request("http://localhost/v1/identity/sessions", {
+    new Request("http://localhost/v1/sessions", {
       headers: { Authorization: `Bearer ${accessToken}` },
     }),
   );
@@ -171,7 +176,7 @@ test("DELETE /v1/identity/sessions/:id with valid token → 200", async () => {
   expect(sessions.length).toBeGreaterThanOrEqual(1);
   const sessionId = sessions[0]!.id;
   const res = await app.handle(
-    new Request(`http://localhost/v1/identity/sessions/${sessionId}`, {
+    new Request(`http://localhost/v1/sessions/${sessionId}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${accessToken}` },
     }),
@@ -179,4 +184,132 @@ test("DELETE /v1/identity/sessions/:id with valid token → 200", async () => {
   expect(res.status).toBe(200);
   const body = (await res.json()) as { id: string };
   expect(body.id).toBe(sessionId);
+});
+
+test("POST /v1/auth/verify matching identity returns 200 with employee", async () => {
+  const db = createTestDb();
+  const { companyId } = await seedCompanyAndEmployees(db);
+  await seedEmployee(db, companyId, {
+    email: "verify@test.com",
+    employeeNumber: "V001",
+  });
+  const app = await createTestAppWithAuth(db, { email: "earth@100x.fi" });
+  const accessToken = await getAccessToken(app);
+
+  const res = await app.handle(
+    new Request("http://localhost/v1/auth/verify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        phoneNumber: "+15551234567",
+        email: "verify@test.com",
+        employeeNumber: "V001",
+      }),
+    }),
+  );
+
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as Record<string, unknown>;
+  expect(body).toMatchObject({
+    fullName: "Test Employee",
+    email: "verify@test.com",
+  });
+  expect(body.id).toBeDefined();
+  expect(body.preferredLanguage).toBe("en-US");
+});
+
+test("POST /v1/auth/verify non-matching identity returns 401", async () => {
+  const db = createTestDb();
+  await seedCompanyAndEmployees(db);
+  const app = await createTestAppWithAuth(db, { email: "earth@100x.fi" });
+  const accessToken = await getAccessToken(app);
+
+  const res = await app.handle(
+    new Request("http://localhost/v1/auth/verify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        phoneNumber: "+15559999999",
+        email: "nonexistent@test.com",
+        employeeNumber: "NONE",
+      }),
+    }),
+  );
+
+  expect(res.status).toBe(401);
+  const body = (await res.json()) as Record<string, unknown>;
+  expect(body).toMatchObject({
+    error: "Unauthorized",
+    message: "Identity verification failed",
+  });
+});
+
+test("POST /v1/auth/verify missing required fields returns 400", async () => {
+  const db = createTestDb();
+  await seedCompanyAndEmployees(db);
+  const app = await createTestAppWithAuth(db, { email: "earth@100x.fi" });
+  const accessToken = await getAccessToken(app);
+
+  const res = await app.handle(
+    new Request("http://localhost/v1/auth/verify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ phoneNumber: "+15551234567" }),
+    }),
+  );
+
+  expect(res.status).toBe(400);
+});
+
+test("POST /v1/auth/verify invalid email format returns 400", async () => {
+  const db = createTestDb();
+  await seedCompanyAndEmployees(db);
+  const app = await createTestAppWithAuth(db, { email: "earth@100x.fi" });
+  const accessToken = await getAccessToken(app);
+
+  const res = await app.handle(
+    new Request("http://localhost/v1/auth/verify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        phoneNumber: "+15551234567",
+        email: "not-an-email",
+        employeeNumber: "001",
+      }),
+    }),
+  );
+
+  expect(res.status).toBe(400);
+});
+
+test("POST /v1/auth/verify without token returns 401", async () => {
+  const db = createTestDb();
+  await seedCompanyAndEmployees(db);
+  const app = await createTestAppWithAuth(db, { email: "earth@100x.fi" });
+
+  const res = await app.handle(
+    new Request("http://localhost/v1/auth/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phoneNumber: "+15551234567",
+        email: "jane@acme.com",
+        employeeNumber: "001",
+      }),
+    }),
+  );
+
+  expect(res.status).toBe(401);
 });

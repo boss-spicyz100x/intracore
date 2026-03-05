@@ -7,7 +7,9 @@ import type { AnyDB } from "../src/db/tickets";
 import { ticketsRouter } from "../src/routes/v1/tickets";
 import { companiesRouter } from "../src/routes/v1/companies";
 import { employeesRouter } from "../src/routes/v1/employees";
-import { identityRouter } from "../src/routes/v1/identity";
+import { authRouter } from "../src/routes/v1/auth";
+import { whitelistsRouter } from "../src/routes/v1/whitelists";
+import { sessionsRouter } from "../src/routes/v1/sessions";
 import { authPlugin } from "../src/auth/middleware";
 
 function initSchema(sqlite: Database) {
@@ -81,7 +83,7 @@ export function createTestApp(db: AnyDB) {
     .use(ticketsRouter(db))
     .use(companiesRouter(db))
     .use(employeesRouter(db))
-    .use(identityRouter(db));
+    .use(authRouter(db));
 }
 
 export async function createTestAppWithAuth(db: AnyDB, mockGitHubUser?: { email: string }) {
@@ -123,8 +125,15 @@ export async function createTestAppWithAuth(db: AnyDB, mockGitHubUser?: { email:
   const app = new Elysia()
     .get("/", healthResponse)
     .get("/health", healthResponse)
-    .use(identityRouter(db))
-    .use(authPlugin(db).use(ticketsRouter(db)).use(companiesRouter(db)).use(employeesRouter(db)));
+    .use(authRouter(db))
+    .use(
+      authPlugin(db)
+        .use(ticketsRouter(db))
+        .use(companiesRouter(db))
+        .use(employeesRouter(db))
+        .use(whitelistsRouter(db))
+        .use(sessionsRouter(db)),
+    );
 
   (app as any).restoreFetch = () => {
     globalThis.fetch = originalFetch;

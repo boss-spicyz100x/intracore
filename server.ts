@@ -5,7 +5,9 @@ import * as schema from "./src/db/schema.postgres";
 import { ticketsRouter } from "./src/routes/v1/tickets";
 import { companiesRouter } from "./src/routes/v1/companies";
 import { employeesRouter } from "./src/routes/v1/employees";
-import { identityRouter } from "./src/routes/v1/identity";
+import { authRouter } from "./src/routes/v1/auth";
+import { whitelistsRouter } from "./src/routes/v1/whitelists";
+import { sessionsRouter } from "./src/routes/v1/sessions";
 import { authPlugin } from "./src/auth/middleware";
 import { requestLoggerPlugin } from "./src/middleware/request-logger";
 import { logger } from "./src/logger";
@@ -36,7 +38,7 @@ new Elysia()
               type: "http",
               scheme: "bearer",
               bearerFormat: "Token",
-              description: "Session token from POST /v1/identity/token",
+              description: "Session token from POST /v1/auth/token",
             },
           },
         },
@@ -45,12 +47,14 @@ new Elysia()
   )
   .get("/", healthResponse, { response: { 200: t.Any() } })
   .get("/health", healthResponse, { response: { 200: t.Any() } })
-  .use(identityRouter(db as any))
+  .use(authRouter(db as any))
   .use(
     authPlugin(db as any)
       .use(ticketsRouter(db as any))
       .use(companiesRouter(db as any))
-      .use(employeesRouter(db as any)),
+      .use(employeesRouter(db as any))
+      .use(whitelistsRouter(db as any))
+      .use(sessionsRouter(db as any)),
   )
   .listen(port, () => {
     logger.info({ port: Number(port) }, "Server listening");
