@@ -35,28 +35,34 @@
         box-sizing: border-box;
       }
 
-      body {
+      html, body {
         margin: 0;
-        min-height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
         font-family: "Roboto", "Google Sans", system-ui, sans-serif;
         background: #fff;
+      }
+
+      body {
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 2rem 1.5rem;
       }
 
       .ticket-card {
+        flex: 1;
+        min-height: 0;
         width: 100%;
         max-width: 500px;
         display: flex;
         flex-direction: column;
-        justify-content: flex-start;
+        padding: 1.5rem 1.5rem 0;
       }
 
       .ticket-header {
+        flex-shrink: 0;
         text-align: left;
-        margin-bottom: 2rem;
+        margin-bottom: 1rem;
       }
 
       .ticket-header .emoji-icon {
@@ -78,6 +84,16 @@
         font-size: 14px;
         color: var(--text-secondary);
         font-weight: 400;
+      }
+
+      .ticket-detail-scroll {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+      }
+
+      .ticket-detail-content {
+        padding-bottom: 1rem;
       }
 
       .detail-section {
@@ -145,10 +161,10 @@
       }
 
       .page-footer {
-        margin-top: auto;
-        padding-top: 2rem;
+        flex-shrink: 0;
         width: 100%;
         max-width: 500px;
+        padding: 1rem 1.5rem 1.5rem;
         display: flex;
         justify-content: flex-start;
         align-items: center;
@@ -159,15 +175,16 @@
   </head>
   <body>
     <div class="ticket-card">
-      <div id="error-state" style="display: none;"></div>
-      <div id="ticket-content">
-        <div class="ticket-header">
-          <p class="emoji-icon">🎫</p>
-          <h1 id="i18n-title" class="md-typescale-headline-large">Ticket details</h1>
-          <p class="ticket-number" id="ticket-number"></p>
-        </div>
+      <div class="ticket-header">
+        <p class="emoji-icon">🎫</p>
+        <h1 id="i18n-title" class="md-typescale-headline-large">Ticket details</h1>
+        <p class="ticket-number" id="ticket-number"></p>
+      </div>
 
-        <div class="detail-section">
+      <div class="ticket-detail-scroll">
+        <div id="error-state" style="display: none;"></div>
+        <div id="ticket-content" class="ticket-detail-content">
+          <div class="detail-section">
           <p class="detail-section-title" id="i18n-status">Status</p>
           <p class="detail-value"><span id="ticket-status" class="badge"></span></p>
         </div>
@@ -226,6 +243,7 @@
             <span class="label" id="i18n-updated">Updated</span>
             <span class="value" id="ticket-updated"></span>
           </div>
+        </div>
         </div>
       </div>
     </div>

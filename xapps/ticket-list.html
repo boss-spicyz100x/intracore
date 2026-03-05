@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <script src="/sdk/app-page-sdk.js"></script>
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <script type="importmap">
+      {
+        "imports": {
+          "@material/web/": "https://esm.run/@material/web/"
+        }
+      }
+    </script>
+    <script type="module">
+      import "@material/web/all.js";
+      import { styles as typescaleStyles } from "@material/web/typography/md-typescale-styles.js";
+
+      document.adoptedStyleSheets.push(typescaleStyles.styleSheet);
+    </script>
+    <style>
+      :root {
+        --google-blue: #1a73e8;
+        --google-blue-hover: #1765cc;
+        --text-primary: #202124;
+        --text-secondary: #5f6368;
+        --link-color: #1a73e8;
+        --border-color: #dadce0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html, body {
+        margin: 0;
+        height: 100dvh;
+        overflow: hidden;
+        font-family: "Roboto", "Google Sans", system-ui, sans-serif;
+        background: #fff;
+      }
+
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .ticket-list-card {
+        flex: 1;
+        min-height: 0;
+        width: 100%;
+        max-width: 500px;
+        display: flex;
+        flex-direction: column;
+        padding: 1.5rem 1.5rem 0;
+      }
+
+      .ticket-list-header {
+        flex-shrink: 0;
+        text-align: left;
+        margin-bottom: 1rem;
+      }
+
+      .ticket-list-header .emoji-icon {
+        margin: 0 0 0.5rem 0;
+        font-size: 48px;
+        line-height: 1;
+        display: block;
+      }
+
+      .ticket-list-header h1 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 500;
+        color: var(--text-primary);
+      }
+
+      .ticket-list-header p:not(.emoji-icon) {
+        margin: 0.25rem 0 0;
+        font-size: 14px;
+        color: var(--text-secondary);
+        font-weight: 400;
+      }
+
+      .ticket-list-scroll {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+      }
+
+      .ticket-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding-bottom: 1rem;
+      }
+
+      .ticket-list-item {
+        padding: 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      .ticket-list-item .ticket-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .ticket-list-item .ticket-number {
+        font-size: 12px;
+        color: var(--text-secondary);
+      }
+
+      .ticket-list-item .ticket-title {
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--text-primary);
+        margin: 0 0 0.5rem 0;
+      }
+
+      .ticket-list-item .ticket-meta {
+        font-size: 14px;
+        color: var(--text-secondary);
+        margin: 0;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .badge-status-NEW { background: #e8f0fe; color: #1a73e8; }
+      .badge-status-PENDING { background: #fef7e0; color: #b06000; }
+      .badge-status-RESOLVED { background: #e6f4ea; color: #137333; }
+      .badge-status-CANCELLED { background: #fce8e6; color: #c5221f; }
+      .badge-status-CLOSED { background: #f1f3f4; color: #5f6368; }
+      .badge-priority-LOW { background: #e6f4ea; color: #137333; }
+      .badge-priority-MEDIUM { background: #fef7e0; color: #b06000; }
+      .badge-priority-HIGH { background: #fce8e6; color: #c5221f; }
+
+      #empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-secondary);
+        font-size: 16px;
+      }
+
+      .page-footer {
+        flex-shrink: 0;
+        width: 100%;
+        max-width: 500px;
+        padding: 1rem 1.5rem 1.5rem;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ticket-list-card">
+      <div class="ticket-list-header">
+        <p class="emoji-icon">📋</p>
+        <h1 id="i18n-title" class="md-typescale-headline-large">Ticket history</h1>
+        <p id="i18n-subtitle">Your submitted tickets</p>
+      </div>
+
+      <div class="ticket-list-scroll">
+        <div id="empty-state" style="display: none;"></div>
+        <div id="ticket-list" class="ticket-list"></div>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <md-outlined-select id="lang-select" label="Language" aria-label="Language">
+        <md-select-option value="en">
+          <div slot="headline">English (United States)</div>
+        </md-select-option>
+        <md-select-option value="th">
+          <div slot="headline">ไทย</div>
+        </md-select-option>
+        <md-select-option value="ja">
+          <div slot="headline">日本語</div>
+        </md-select-option>
+        <md-select-option value="de">
+          <div slot="headline">Deutsch</div>
+        </md-select-option>
+      </md-outlined-select>
+    </footer>
+  </body>
+
+  <script>
+    const translations = {
+      en: {
+        title: 'Ticket history',
+        subtitle: 'Your submitted tickets',
+        status: 'Status',
+        priority: 'Priority',
+        created: 'Created',
+        empty: 'No tickets yet'
+      },
+      th: {
+        title: 'ประวัติตั๋ว',
+        subtitle: 'ตั๋วที่คุณส่ง',
+        status: 'สถานะ',
+        priority: 'ความสำคัญ',
+        created: 'สร้างเมื่อ',
+        empty: 'ยังไม่มีตั๋ว'
+      },
+      ja: {
+        title: 'チケット履歴',
+        subtitle: '送信したチケット',
+        status: 'ステータス',
+        priority: '優先度',
+        created: '作成日時',
+        empty: 'チケットはまだありません'
+      },
+      de: {
+        title: 'Ticket-Verlauf',
+        subtitle: 'Ihre eingereichten Tickets',
+        status: 'Status',
+        priority: 'Priorität',
+        created: 'Erstellt',
+        empty: 'Noch keine Tickets'
+      }
+    };
+
+    function applyLanguage(lang) {
+      const t = translations[lang] || translations.en;
+      document.getElementById('i18n-title').textContent = t.title;
+      document.getElementById('i18n-subtitle').textContent = t.subtitle;
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '—';
+      try {
+        const d = new Date(iso);
+        return d.toLocaleString();
+      } catch {
+        return iso;
+      }
+    }
+
+    function renderTicketList(tickets, lang) {
+      const t = translations[lang] || translations.en;
+      const listEl = document.getElementById('ticket-list');
+      const emptyEl = document.getElementById('empty-state');
+
+      if (tickets.length === 0) {
+        listEl.style.display = 'none';
+        emptyEl.textContent = t.empty;
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      emptyEl.style.display = 'none';
+      listEl.style.display = 'flex';
+      listEl.innerHTML = '';
+
+      for (const ticket of tickets) {
+        const item = document.createElement('div');
+        item.className = 'ticket-list-item';
+        const metaText = (ticket.company?.name || '—') + ' · ' + formatDate(ticket.createdAt);
+        item.innerHTML = `
+          <div class="ticket-row">
+            <span class="badge badge-status-${ticket.status}">${ticket.status}</span>
+            <span class="badge badge-priority-${ticket.priority}">${ticket.priority}</span>
+            <span class="ticket-number">${ticket.ticketNumber}</span>
+          </div>
+          <p class="ticket-title">${ticket.title}</p>
+          <p class="ticket-meta">${metaText}</p>
+        `;
+        listEl.appendChild(item);
+      }
+    }
+
+    const TICKETS = [
+      { ticketNumber: 'ACME-00001', title: 'Sample ticket', status: 'NEW', priority: 'MEDIUM', company: { name: 'Acme Corp' }, createdAt: new Date().toISOString() },
+      { ticketNumber: 'ACME-00002', title: 'Another sample ticket', status: 'RESOLVED', priority: 'LOW', company: { name: 'Acme Corp' }, createdAt: new Date(Date.now() - 86400000).toISOString() },
+      { ticketNumber: 'ACME-00003', title: 'Third ticket', status: 'PENDING', priority: 'HIGH', company: { name: 'Acme Corp' }, createdAt: new Date(Date.now() - 172800000).toISOString() },
+      { ticketNumber: 'ACME-00004', title: 'Laptop not responding', status: 'PENDING', priority: 'HIGH', company: { name: 'Acme Corp' }, createdAt: new Date(Date.now() - 259200000).toISOString() },
+      { ticketNumber: 'ACME-00005', title: 'Printer paper jam', status: 'RESOLVED', priority: 'LOW', company: { name: 'Acme Corp' }, createdAt: new Date(Date.now() - 345600000).toISOString() },
+      { ticketNumber: 'ACME-00006', title: 'Access card not working', status: 'CLOSED', priority: 'MEDIUM', company: { name: 'Acme Corp' }, createdAt: new Date(Date.now() - 432000000).toISOString() },
+      { ticketNumber: 'ACME-00007', title: 'Meeting room booking', status: 'NEW', priority: 'LOW', company: { name: 'Acme Corp' }, createdAt: new Date(Date.now() - 518400000).toISOString() },
+      { ticketNumber: 'ACME-00008', title: 'VPN connection issue', status: 'RESOLVED', priority: 'HIGH', company: { name: 'Acme Corp' }, createdAt: new Date(Date.now() - 604800000).toISOString() },
+      { ticketNumber: 'ACME-00009', title: 'Desk chair replacement', status: 'CANCELLED', priority: 'LOW', company: { name: 'Acme Corp' }, createdAt: new Date(Date.now() - 691200000).toISOString() },
+      { ticketNumber: 'ACME-00010', title: 'Email sync problem', status: 'PENDING', priority: 'MEDIUM', company: { name: 'Acme Corp' }, createdAt: new Date(Date.now() - 777600000).toISOString() }
+    ];
+
+    const langSelect = document.getElementById('lang-select');
+    const savedLang = localStorage.getItem('ticket-list-lang') || 'en';
+
+    langSelect.value = savedLang;
+    document.documentElement.lang = savedLang;
+    applyLanguage(savedLang);
+    renderTicketList(TICKETS, savedLang);
+
+    langSelect.addEventListener('change', () => {
+      const lang = langSelect.value;
+      localStorage.setItem('ticket-list-lang', lang);
+      document.documentElement.lang = lang;
+      applyLanguage(lang);
+      renderTicketList(TICKETS, lang);
+    });
+  </script>
+</html>
