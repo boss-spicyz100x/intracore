@@ -130,12 +130,13 @@ bun test
 ├── xapps/             # Cognigy xApps (verification, ticket-list, ticket-detail)
 ├── migrations/        # Drizzle migrations
 ├── tests/             # Unit and e2e tests
-└── docs/              # Technical design document
+└── docs/              # Technical design document, pitch deck
 ```
 
 ## Documentation
 
 - [Technical Design Document](docs/technical-design-document/technical-design-document.pdf) (PDF)
+- [Pitch Deck](docs/pitch-deck/) — Interactive presentation (`cd docs/pitch-deck && bun run present`) or MP4 (`bun run render`)
 
 ## Authors
 

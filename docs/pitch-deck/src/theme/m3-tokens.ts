@@ -1,0 +1,17 @@
+export const M3 = {
+  primary: "#6750a4",
+  onPrimary: "#ffffff",
+  primaryContainer: "#eaddff",
+  onPrimaryContainer: "#21005d",
+  surface: "#fef7ff",
+  onSurface: "#1d1b20",
+  onSurfaceVariant: "#49454f",
+  outline: "#79747e",
+  outlineVariant: "#e7e0ec",
+  headlineLarge: { fontSize: 56, fontWeight: 400 },
+  titleLarge: { fontSize: 36, fontWeight: 500 },
+  bodyLarge: { fontSize: 28, fontWeight: 400 },
+  radiusMedium: 12,
+  radiusLarge: 28,
+  radiusXl: 48,
+} as const;
